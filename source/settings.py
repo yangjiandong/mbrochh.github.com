@@ -2,7 +2,7 @@
 # Basic settings
 # ===============
 AUTHOR = 'Martin Brochhaus'
-DEFAULT_CATEGORY = 'Blog'
+DEFAULT_CATEGORY = 'blog'
 SITENAME = 'martinbrochhaus.com'
 SITEURL = 'http://www.martinbrochhaus.com'
 SITE_URL = SITEURL
