@@ -1,5 +1,108 @@
 <?xml version="1.0" encoding="utf-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom"><title>martinbrochhaus.com</title><link href="http://www.martinbrochhaus.com/" rel="alternate"></link><link href="http://www.martinbrochhaus.com/feeds/all.atom.xml" rel="self"></link><id>http://www.martinbrochhaus.com/</id><updated>2012-12-06T00:00:00+08:00</updated><entry><title>RE: Developer Time</title><link href="http://www.martinbrochhaus.com/2012/12/re-developer-time.html" rel="alternate"></link><updated>2012-12-06T00:00:00+08:00</updated><author><name>Martin Brochhaus</name></author><id>tag:www.martinbrochhaus.com,2012-12-06:2012/12/re-developer-time.html</id><summary type="html">&lt;p&gt;I just came across &lt;a href="http://pydanny.com/developer-time.html"&gt;Daniel Greenfeld's post about Developer time&lt;/a&gt;
+<feed xmlns="http://www.w3.org/2005/Atom"><title>martinbrochhaus.com</title><link href="http://www.martinbrochhaus.com/" rel="alternate"></link><link href="http://www.martinbrochhaus.com/feeds/all.atom.xml" rel="self"></link><id>http://www.martinbrochhaus.com/</id><updated>2013-01-10T00:00:00+08:00</updated><entry><title>Daemonizing Solr on Webfaction with Supervisor</title><link href="http://www.martinbrochhaus.com/2013/01/solr.html" rel="alternate"></link><updated>2013-01-10T00:00:00+08:00</updated><author><name>Martin Brochhaus</name></author><id>tag:www.martinbrochhaus.com,2013-01-10:2013/01/solr.html</id><summary type="html">&lt;p&gt;A while ago I wrote how to &lt;a href="http://martinbrochhaus.com/2012/07/circus.html"&gt;daemonize Solr on Webfaction with Circus &lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;Unfortunately this solution has not proven to be as stable as I wished, plus
+I think there is a security issue because in theory other Webfaction users on
+the same machine could communicate with my own Circus instance.&lt;/p&gt;
+&lt;p&gt;Today I tried to use &lt;a href="http://supervisord.org/"&gt;supervisord&lt;/a&gt; for the first time.
+Here is what I learned:&lt;/p&gt;
+&lt;h2&gt;Install supervisor on Webfaction&lt;/h2&gt;
+&lt;p&gt;Kudos to &lt;a href="http://jamiecurle.co.uk/blog/webfaction-installing-configuring-supervisor/"&gt;Jamie Curle&lt;/a&gt;
+for describing the process nice enough for a dummy like me.&lt;/p&gt;
+&lt;p&gt;Following his instructions I made sure that I have not activated any
+virtualenv, then I ran&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;pip install supervisor
+
+&lt;span class="c"&gt;# Let&amp;#39;s create some folders we will need later on&lt;/span&gt;
+mkdir ~/tmp
+mkdir -p ~/mylogs/cron
+mkdir ~/etc &lt;span class="o"&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span class="nb"&gt;cd&lt;/span&gt; ~/etc
+vim supervisor.conf
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;Here is what my &lt;code&gt;supervisor.conf&lt;/code&gt; looks like. Of course you would need to
+insert your webfaction username and adjust the path to your solr installation:&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span class="k"&gt;[unix_http_server]&lt;/span&gt;
+&lt;span class="na"&gt;file&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s"&gt;/home/username/tmp/supervisor.sock&lt;/span&gt;
+
+&lt;span class="k"&gt;[supervisord]&lt;/span&gt;
+&lt;span class="na"&gt;logfile&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s"&gt;/home/username/mylogs/supervisord.log&lt;/span&gt;
+&lt;span class="na"&gt;logfile_maxbytes&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s"&gt;50MB&lt;/span&gt;
+&lt;span class="na"&gt;logfile_backups&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s"&gt;10&lt;/span&gt;
+&lt;span class="na"&gt;loglevel&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s"&gt;info&lt;/span&gt;
+&lt;span class="na"&gt;pidfile&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s"&gt;/home/username/tmp/supervisord.pid&lt;/span&gt;
+
+&lt;span class="k"&gt;[rpcinterface:supervisor]&lt;/span&gt;
+&lt;span class="na"&gt;supervisor.rpcinterface_factory&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="s"&gt;supervisor.rpcinterface:make_main_rpcinterface&lt;/span&gt;
+
+&lt;span class="k"&gt;[supervisorctl]&lt;/span&gt;
+&lt;span class="na"&gt;serverurl&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s"&gt;unix:///home/username/tmp/supervisor.sock&lt;/span&gt;
+
+&lt;span class="k"&gt;[program:solr]&lt;/span&gt;
+&lt;span class="na"&gt;directory&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s"&gt;/home/username/opt/apache-solr-3.5.0/example&lt;/span&gt;
+&lt;span class="na"&gt;command&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s"&gt;java -Djava.util.logging.config.file=logging.properties -jar start.jar&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;The meaning of all these config sections should be obvious and is very well
+documented in the &lt;a href="http://supervisord.org/configuration.html"&gt;supervisor configuration documentation&lt;/a&gt;.&lt;/p&gt;
+&lt;h2&gt;Enable solr logging&lt;/h2&gt;
+&lt;p&gt;After having quite some trouble with solr being very instable, I decided to
+figure out this whole logging thing. I found this little gem about
+&lt;a href="https://wiki.apache.org/solr/LoggingInDefaultJettySetup"&gt;solr logging&lt;/a&gt; which
+made things very easy.&lt;/p&gt;
+&lt;p&gt;Just create the file &lt;code&gt;logging.properties&lt;/code&gt; in the same folder where solr's
+&lt;code&gt;start.jar&lt;/code&gt; resides. Mine looks like this (again, replace username with your
+webfaction account name):&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span class="c"&gt;# Default global logging level:&lt;/span&gt;
+&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;level&lt;/span&gt; &lt;span class="p"&gt;=&lt;/span&gt; &lt;span class="n"&gt;INFO&lt;/span&gt;
+
+&lt;span class="c"&gt;# Write to a file:&lt;/span&gt;
+&lt;span class="n"&gt;handlers&lt;/span&gt; &lt;span class="p"&gt;=&lt;/span&gt; &lt;span class="n"&gt;java&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;util&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;logging&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;FileHandler&lt;/span&gt;
+
+&lt;span class="c"&gt;# Write log messages in XML format:&lt;/span&gt;
+&lt;span class="c"&gt;# Use java.util.logging.SimpleFormatter to log like Solr logs to the screen by default&lt;/span&gt;
+&lt;span class="n"&gt;java&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;util&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;logging&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;FileHandler&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;formatter&lt;/span&gt; &lt;span class="p"&gt;=&lt;/span&gt; &lt;span class="n"&gt;java&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;util&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;logging&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;XMLFormatter&lt;/span&gt;
+
+&lt;span class="c"&gt;# Log to the current working directory, with log files named solrxxx.log&lt;/span&gt;
+&lt;span class="n"&gt;java&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;util&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;logging&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;FileHandler&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;pattern&lt;/span&gt; &lt;span class="p"&gt;=&lt;/span&gt; &lt;span class="o"&gt;/&lt;/span&gt;&lt;span class="nb"&gt;home&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;&lt;span class="n"&gt;username&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;&lt;span class="n"&gt;mylogs&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;&lt;span class="n"&gt;solr&lt;/span&gt;&lt;span class="c"&gt;%u.log&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;If you are wondering what different options for logging levels there are, have
+a look at this page about &lt;a href="http://lucidworks.lucidimagination.com/display/solr/Configuring+Logging"&gt;solr logging&lt;/a&gt;.
+&lt;code&gt;INFO&lt;/code&gt; might be a bit too much if you are running a site where thousands of
+users send hundreds of search queries per day - each query would be logged.&lt;/p&gt;
+&lt;h2&gt;Create crontab to restart supervisor&lt;/h2&gt;
+&lt;p&gt;The last question is: Who watches the watchmen? Crontab does. Thankfully you
+cannot run the &lt;code&gt;supervisord&lt;/code&gt; command twice - it would warn you that another
+instance is already running. Therefore we can safely schedule a cronjob to run
+&lt;code&gt;supervisord&lt;/code&gt; every five minutes:&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span class="o"&gt;*/&lt;/span&gt;5 &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="o"&gt;~/&lt;/span&gt;&lt;span class="n"&gt;bin&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;&lt;span class="n"&gt;supervisord&lt;/span&gt; &lt;span class="o"&gt;&amp;gt;&lt;/span&gt; $&lt;span class="n"&gt;HOME&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;&lt;span class="n"&gt;mylogs&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;&lt;span class="n"&gt;cron&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;&lt;span class="n"&gt;supervisord&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nb"&gt;log&lt;/span&gt; 2&lt;span class="o"&gt;&amp;gt;&amp;amp;&lt;/span&gt;1
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;h2&gt;Manage solr&lt;/h2&gt;
+&lt;p&gt;If you ever need to start, stop or restart solr, you can do so via
+&lt;code&gt;supervisorctl start|stop|restart solr&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;You could also just run &lt;code&gt;supervisorctl&lt;/code&gt; and would get into a manage console.
+Then type &lt;code&gt;help&lt;/code&gt; and see what commands are available. There seems to be an
+&lt;a href="https://github.com/Supervisor/supervisor/issues/121"&gt;open bug&lt;/a&gt; with the
+&lt;code&gt;reload&lt;/code&gt; command at the moment, so better don't use that one for the time
+being.&lt;/p&gt;
+&lt;h2&gt;Bonus: Fabfile to rebuild the index&lt;/h2&gt;
+&lt;p&gt;Every now and then you will introduce changes to your models and your search
+index that will require a rebuild of the index. I like to automate that with
+a Fabric task. Here it is:&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;run_rebuild_index&lt;/span&gt;&lt;span class="p"&gt;():&lt;/span&gt;
+    &lt;span class="sd"&gt;&amp;quot;&amp;quot;&amp;quot;Rebuilds the Solr index on the server.&amp;quot;&amp;quot;&amp;quot;&lt;/span&gt;
+    &lt;span class="n"&gt;run&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;#39;supervisorctl stop solr&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="n"&gt;time&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;sleep&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mi"&gt;5&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="n"&gt;run&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;#39;workon envname &amp;amp;&amp;amp; $HOME/webapps/django/myproject/manage.py build_solr_schema &amp;gt; $HOME/opt/apache-solr-3.5.0/example/solr/conf/schema.xml&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="n"&gt;run&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;#39;supervisorctl start solr&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="n"&gt;time&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;sleep&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mi"&gt;5&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="n"&gt;run&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;#39;workon envname &amp;amp;&amp;amp; $HOME/webapps/django/myproject/manage.py rebuild_index --noinput&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;</summary><category term="solr"></category><category term="webfaction"></category></entry><entry><title>RE: Developer Time</title><link href="http://www.martinbrochhaus.com/2012/12/re-developer-time.html" rel="alternate"></link><updated>2012-12-06T00:00:00+08:00</updated><author><name>Martin Brochhaus</name></author><id>tag:www.martinbrochhaus.com,2012-12-06:2012/12/re-developer-time.html</id><summary type="html">&lt;p&gt;I just came across &lt;a href="http://pydanny.com/developer-time.html"&gt;Daniel Greenfeld's post about Developer time&lt;/a&gt;
 and when I was halfway entering my reply into the comment field I realised
 that this might be worth a blog post on it's own. So here is my two cents:&lt;/p&gt;
 &lt;p&gt;I believe that there are good ways to maximise developer time, they might just
