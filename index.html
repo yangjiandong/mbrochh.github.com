@@ -58,8 +58,191 @@
 
                             <aside id="featured" class="body">
                 <article>
-                    <h1 class="entry-title"><a href="./2013/01/solr.html">Daemonizing Solr on Webfaction with Supervisor</a></h1> 
+                    <h1 class="entry-title"><a href="./2013/01/bootstrap.html">How to manage Twitter Bootstrap</a></h1> 
                     <footer class="post-info">
+        <abbr class="published" title="2013-01-17T00:00:00">
+                Thu 17 January 2013
+        </abbr>
+
+                <address class="vcard author">
+                By <a class="url fn" href="./author/martin-brochhaus.html">Martin Brochhaus</a>
+        </address>
+        <p>In <a href="./category/blog.html">Blog</a>. </p>
+<p>tags: <a href="./tag/css.html">css</a><a href="./tag/bootstrap.html">bootstrap</a><a href="./tag/howto.html">howto</a></p>
+</footer><!-- /.post-info --><p>Without any doubt, <a href="http://twitter.github.com/bootstrap/">Twitter's Bootstrap</a>
+is awesome. So far I am using it in more than 10 projects and I don't regret
+anything.</p>
+<p>Unfortunately, Bootstrap has one major flaw: You can't really add it to your
+project and manipulate it, without editing the source files. Bootstrap offers
+a download page where you can chose the parts that you want and where you can
+enter values for all the variables - but I don't know who on earth works like
+this. I usually don't know about exact color values for my project until
+shortly before go-live and I certainly don't want to come back to the download
+page and download new versions of bootstrap over and over again.</p>
+<p>Here is what I want:</p>
+<ul>
+<li>I want to add Bootstrap to my project and work with the latest files from
+  the github repo</li>
+<li>Yet I don't want to manipulate them, because</li>
+<li>I want to be able to update my bootstrap sources at any time without merge
+  conflicts</li>
+<li>Updating should be a no-brainer</li>
+</ul>
+<p>My solution might not be the most elegant, but so far it seems to get the job
+done:</p>
+<h2>Add Bootstrap as a submodule</h2>
+<p>First I add bootstrap as a git submodule to my Django projects:</p>
+<div class="codehilite"><pre><span class="n">git</span> <span class="n">submodule</span> <span class="n">add</span> <span class="n">git</span><span class="p">:</span><span class="o">//</span><span class="n">github</span><span class="p">.</span><span class="n">com</span><span class="o">/</span><span class="n">twitter</span><span class="o">/</span><span class="n">bootstrap</span><span class="p">.</span><span class="n">git</span> <span class="n">myproject</span><span class="o">/</span><span class="n">submodules</span><span class="o">/</span><span class="n">bootstrap</span>
+</pre></div>
+
+
+<p>It is important to add the submodule to a path inside your project root. This
+way you can place symlinks easily with all relative paths.</p>
+<h2>Setup your css folder</h2>
+<p>Surely you will have a folder that holds your project's CSS files somewhere in
+your project. For my Django projects that is usually:</p>
+<div class="codehilite"><pre><span class="n">myproject</span><span class="o">/</span><span class="n">myproject</span><span class="o">/</span><span class="n">static</span><span class="o">/</span><span class="n">css</span><span class="o">/</span>
+</pre></div>
+
+
+<p>Inside of this folder I like to create a <code>libs</code> folder which holds CSS files
+of third party plugins or frameworks that I use. In our case this would be
+bootstrap, so let's create a bootstrap folder:</p>
+<div class="codehilite"><pre><span class="n">mkdir</span> <span class="n">myproject</span><span class="o">/</span><span class="n">myproject</span><span class="o">/</span><span class="n">static</span><span class="o">/</span><span class="n">css</span><span class="o">/</span><span class="n">libs</span><span class="o">/</span><span class="n">bootstrap</span><span class="o">/</span>
+</pre></div>
+
+
+<h2>Symlink the bootstrap files</h2>
+<p>So here is the first part of the trick. Inside of the <code>bootstrap</code> which we have
+just created, we symlink all the <code>.less</code> files of the Bootstrap framework:</p>
+<div class="codehilite"><pre><span class="n">cd</span> <span class="n">myproject</span><span class="o">/</span><span class="n">myproject</span><span class="o">/</span><span class="n">static</span><span class="o">/</span><span class="n">css</span><span class="o">/</span><span class="n">libs</span><span class="o">/</span><span class="n">bootstrap</span><span class="o">/</span>
+<span class="n">ln</span> <span class="o">-</span><span class="n">s</span> <span class="p">.</span><span class="o">./</span><span class="p">.</span><span class="o">./</span><span class="p">.</span><span class="o">./</span><span class="p">.</span><span class="o">./</span><span class="p">.</span><span class="o">./</span><span class="n">submodules</span><span class="o">/</span><span class="n">bootstrap</span><span class="o">/</span><span class="n">less</span><span class="o">/*</span> <span class="p">.</span>
+</pre></div>
+
+
+<p>It would be better to just symlink the whole <code>less</code> folder instead of all files
+but unfortunately <code>lessc</code> is not able to follow such symlinks and would fail
+to compile the <code>bootstrap.less</code> file.</p>
+<h2>Prepare the working files</h2>
+<p>Here comes the second part of the trick. We will create copies of the files
+<code>bootstrap.less</code> and <code>responsive.less</code>:</p>
+<div class="codehilite"><pre><span class="n">cd</span> <span class="n">myproject</span><span class="o">/</span><span class="n">myproject</span><span class="o">/</span><span class="n">static</span><span class="o">/</span><span class="n">css</span><span class="o">/</span>
+<span class="n">cp</span> <span class="n">libs</span><span class="o">/</span><span class="n">bootstrap</span><span class="o">/</span><span class="n">bootstrap</span><span class="p">.</span><span class="n">less</span> <span class="p">.</span>
+<span class="n">cp</span> <span class="n">libs</span><span class="o">/</span><span class="n">bootstrap</span><span class="o">/</span><span class="n">responsive</span><span class="p">.</span><span class="n">less</span> <span class="p">.</span>
+<span class="n">touch</span> <span class="n">my</span><span class="o">-</span><span class="n">variables</span><span class="p">.</span><span class="n">less</span>
+<span class="n">touch</span> <span class="n">styles</span><span class="p">.</span><span class="n">less</span>
+</pre></div>
+
+
+<p>I know, I know, we have just symlinked them, why create another copy now? The
+reason is that we won't use the symlinks (you could delete them). Instead
+we will make a three simple changes to those two files. First we need to change
+the paths to all the imported <code>.less</code> files:</p>
+<div class="codehilite"><pre><span class="n">sed</span> <span class="o">-</span><span class="nb">i</span> <span class="o">-</span><span class="n">e</span> <span class="s">&#39;s/import &quot;/import &quot;libs\/bootstrap\//g&#39;</span> <span class="n">bootstrap</span><span class="p">.</span><span class="n">less</span>
+<span class="n">sed</span> <span class="o">-</span><span class="nb">i</span> <span class="o">-</span><span class="n">e</span> <span class="s">&#39;s/import &quot;/import &quot;libs\/bootstrap\//g&#39;</span> <span class="n">responsive</span><span class="p">.</span><span class="n">less</span>
+</pre></div>
+
+
+<p>Next we will add an import of our own variables file to both files. The import
+should come right after the import of the original <code>variables.less</code>:</p>
+<div class="codehilite"><pre><span class="cp"># Excerpt from your bootstrap.less copy:</span>
+
+<span class="p">...</span>
+<span class="c1">// CSS Reset</span>
+<span class="err">@</span><span class="n">import</span> <span class="s">&quot;libs/bootstrap/reset.less&quot;</span><span class="p">;</span>
+
+<span class="c1">// Core variables and mixins</span>
+<span class="err">@</span><span class="n">import</span> <span class="s">&quot;libs/bootstrap/variables.less&quot;</span><span class="p">;</span>
+
+<span class="err">@</span><span class="n">import</span> <span class="s">&quot;my-variables.less&quot;</span><span class="p">;</span> <span class="c1">// Our own variables overrides</span>
+
+<span class="err">@</span><span class="n">import</span> <span class="s">&quot;libs/bootstrap/mixins.less&quot;</span><span class="p">;</span>
+<span class="p">...</span>
+</pre></div>
+
+
+<p>Finally we will include our very own <code>styles.less</code> at the bottom of
+<code>bootstrap.less</code>. Styles in this file would override everything else from
+bootstrap:</p>
+<div class="codehilite"><pre><span class="cp"># Excerpt from your bootstrap.less copy:</span>
+
+<span class="p">...</span>
+<span class="c1">// Utility classes</span>
+<span class="err">@</span><span class="n">import</span> <span class="s">&quot;libs/bootstrap/utilities.less&quot;</span><span class="p">;</span> <span class="c1">// Has to be last to override when necessary</span>
+
+<span class="c1">// Our own stuff</span>
+<span class="err">@</span><span class="n">import</span> <span class="s">&quot;styles.less&quot;</span><span class="p">;</span>
+</pre></div>
+
+
+<p>Repeat the last two steps for <code>responsive.less</code> as well, of course here you
+would add an import to <code>styles-responsive.less</code> instead of <code>styles.less</code> at the 
+bottom.</p>
+<h2>How to work with this setup?</h2>
+<p>That's a whole lot of files to deal with, but the rules are actually quite
+simple:</p>
+<ul>
+<li>Never touch anything in the <code>/libs/bootstrap/</code> folder</li>
+<li>If you would like to change the value of any of Bootstrap's
+  <a href="https://github.com/twitter/bootstrap/blob/master/less/variables.less">variables</a>,
+  override that same variable in our <code>my-varibales.less</code> file.</li>
+<li>You can even invent new variables here.</li>
+<li>Whenever you would like to add project specific styles for your site, add
+  them to <code>styles.less</code> and <code>responsive-styles.less</code>.</li>
+</ul>
+<p>When you are done, compile the files <code>bootstrap.less</code> and <code>responsive.less</code>. I
+like to save the output as <code>bootstrap.css</code> and <code>bootstrap-responsive.css</code> and
+those two files are the ones that I link in my templates.</p>
+<h2>Why is this awesome?</h2>
+<p>First of all, you will have your project specific overrides included in the
+rest of the Bootstrap framework and don't need to link it in your templates.
+This saves you one request.</p>
+<p>Secondly, we are symlinking to a git submodule, so if a new version or even
+just a minor bugfix is released, we can just <code>cd</code> into the
+<code>submodules/bootstrap</code> folder and run <code>git pull</code>. After that we need to
+re-compile our files and that's it - we just updated our Bootstrap files.</p>
+<h2>What can go wrong?</h2>
+<p>There is one thing that can and will still go wrong: The two file that we have
+modified and copied (<code>bootstrap.less</code> and <code>responsive.less</code>) might differ
+when you pull the latest Bootstrap version. Especially when a major new release
+happened, there will most definitely be new imports in those files. Luckily
+those files are really simple, so you can probably spot the new import at a
+glance. A new import would also mean that there is a new file that should be
+symlinked.</p>
+<p>So in this case, the best workflow would be this:</p>
+<ul>
+<li>Delete all symlinks and re-create them</li>
+<li>Copy <code>bootstrap.less</code> and <code>responsive.less</code> again</li>
+<li>Run the <code>sed</code> commands again</li>
+<li>Add the imports to <code>my-variables.less</code> and <code>styles.less</code> again.</li>
+</ul>
+<p>You could even create a shell script for this task, therefore I consider it
+a no-brainer :)</p>
+<h2>tl;dr</h2>
+<p>We want to use bootstrap as a git submodule because then we can update it
+simply via <code>git pull</code>.</p>
+<p>We can't really touch any of the sourcefiles because that would result in merge
+conflicts when we pull a new version, but the <code>variables.less</code> file is full of
+gold and really needs to be changed.</p>
+<p>As a solution, we just create our own <code>my-variables.less</code> file and import it
+in copies of <code>bootstrap.less</code> and <code>responsive.less</code> - those files are just as
+likely to change but if they do, we can re-create them in no time.</p><p>There are <a href="./2013/01/bootstrap.html#disqus_thread">comments</a>.</p>                </article>
+                            </aside><!-- /#featured -->
+                            <section id="content" class="body">
+                    <h1>Other articles</h1>
+                    <hr />
+                    <ol id="posts-list" class="hfeed">
+                                                
+
+                 
+                        <li><article class="hentry">    
+                <header>
+                    <h1><a href="./2013/01/solr.html" rel="bookmark"
+                           title="Permalink to Daemonizing Solr on Webfaction with Supervisor">Daemonizing Solr on Webfaction with Supervisor</a></h1>
+                </header>
+                
+                <div class="entry-content">
+                <footer class="post-info">
         <abbr class="published" title="2013-01-10T00:00:00">
                 Thu 10 January 2013
         </abbr>
@@ -69,116 +252,14 @@
         </address>
         <p>In <a href="./category/blog.html">Blog</a>. </p>
 <p>tags: <a href="./tag/solr.html">solr</a><a href="./tag/webfaction.html">webfaction</a></p>
-</footer><!-- /.post-info --><p>A while ago I wrote how to <a href="http://martinbrochhaus.com/2012/07/circus.html">daemonize Solr on Webfaction with Circus </a>.</p>
+</footer><!-- /.post-info -->                <p>A while ago I wrote how to <a href="http://martinbrochhaus.com/2012/07/circus.html">daemonize Solr on Webfaction with Circus </a>.</p>
 <p>Unfortunately this solution has not proven to be as stable as I wished, plus
 I think there is a security issue because in theory other Webfaction users on
-the same machine could communicate with my own Circus instance.</p>
-<p>Today I tried to use <a href="http://supervisord.org/">supervisord</a> for the first time.
-Here is what I learned:</p>
-<h2>Install supervisor on Webfaction</h2>
-<p>Kudos to <a href="http://jamiecurle.co.uk/blog/webfaction-installing-configuring-supervisor/">Jamie Curle</a>
-for describing the process nice enough for a dummy like me.</p>
-<p>Following his instructions I made sure that I have not activated any
-virtualenv, then I ran</p>
-<div class="codehilite"><pre>pip install supervisor
-
-<span class="c"># Let&#39;s create some folders we will need later on</span>
-mkdir ~/tmp
-mkdir -p ~/mylogs/cron
-mkdir ~/etc <span class="o">&amp;&amp;</span> <span class="nb">cd</span> ~/etc
-vim supervisor.conf
-</pre></div>
-
-
-<p>Here is what my <code>supervisor.conf</code> looks like. Of course you would need to
-insert your webfaction username and adjust the path to your solr installation:</p>
-<div class="codehilite"><pre><span class="k">[unix_http_server]</span>
-<span class="na">file</span><span class="o">=</span><span class="s">/home/username/tmp/supervisor.sock</span>
-
-<span class="k">[supervisord]</span>
-<span class="na">logfile</span><span class="o">=</span><span class="s">/home/username/mylogs/supervisord.log</span>
-<span class="na">logfile_maxbytes</span><span class="o">=</span><span class="s">50MB</span>
-<span class="na">logfile_backups</span><span class="o">=</span><span class="s">10</span>
-<span class="na">loglevel</span><span class="o">=</span><span class="s">info</span>
-<span class="na">pidfile</span><span class="o">=</span><span class="s">/home/username/tmp/supervisord.pid</span>
-
-<span class="k">[rpcinterface:supervisor]</span>
-<span class="na">supervisor.rpcinterface_factory</span> <span class="o">=</span> <span class="s">supervisor.rpcinterface:make_main_rpcinterface</span>
-
-<span class="k">[supervisorctl]</span>
-<span class="na">serverurl</span><span class="o">=</span><span class="s">unix:///home/username/tmp/supervisor.sock</span>
-
-<span class="k">[program:solr]</span>
-<span class="na">directory</span><span class="o">=</span><span class="s">/home/username/opt/apache-solr-3.5.0/example</span>
-<span class="na">command</span><span class="o">=</span><span class="s">java -Djava.util.logging.config.file=logging.properties -jar start.jar</span>
-</pre></div>
-
-
-<p>The meaning of all these config sections should be obvious and is very well
-documented in the <a href="http://supervisord.org/configuration.html">supervisor configuration documentation</a>.</p>
-<h2>Enable solr logging</h2>
-<p>After having quite some trouble with solr being very instable, I decided to
-figure out this whole logging thing. I found this little gem about
-<a href="https://wiki.apache.org/solr/LoggingInDefaultJettySetup">solr logging</a> which
-made things very easy.</p>
-<p>Just create the file <code>logging.properties</code> in the same folder where solr's
-<code>start.jar</code> resides. Mine looks like this (again, replace username with your
-webfaction account name):</p>
-<div class="codehilite"><pre><span class="c"># Default global logging level:</span>
-<span class="p">.</span><span class="n">level</span> <span class="p">=</span> <span class="n">INFO</span>
-
-<span class="c"># Write to a file:</span>
-<span class="n">handlers</span> <span class="p">=</span> <span class="n">java</span><span class="p">.</span><span class="n">util</span><span class="p">.</span><span class="n">logging</span><span class="p">.</span><span class="n">FileHandler</span>
-
-<span class="c"># Write log messages in XML format:</span>
-<span class="c"># Use java.util.logging.SimpleFormatter to log like Solr logs to the screen by default</span>
-<span class="n">java</span><span class="p">.</span><span class="n">util</span><span class="p">.</span><span class="n">logging</span><span class="p">.</span><span class="n">FileHandler</span><span class="p">.</span><span class="n">formatter</span> <span class="p">=</span> <span class="n">java</span><span class="p">.</span><span class="n">util</span><span class="p">.</span><span class="n">logging</span><span class="p">.</span><span class="n">XMLFormatter</span>
-
-<span class="c"># Log to the current working directory, with log files named solrxxx.log</span>
-<span class="n">java</span><span class="p">.</span><span class="n">util</span><span class="p">.</span><span class="n">logging</span><span class="p">.</span><span class="n">FileHandler</span><span class="p">.</span><span class="n">pattern</span> <span class="p">=</span> <span class="o">/</span><span class="nb">home</span><span class="o">/</span><span class="n">username</span><span class="o">/</span><span class="n">mylogs</span><span class="o">/</span><span class="n">solr</span><span class="c">%u.log</span>
-</pre></div>
-
-
-<p>If you are wondering what different options for logging levels there are, have
-a look at this page about <a href="http://lucidworks.lucidimagination.com/display/solr/Configuring+Logging">solr logging</a>.
-<code>INFO</code> might be a bit too much if you are running a site where thousands of
-users send hundreds of search queries per day - each query would be logged.</p>
-<h2>Create crontab to restart supervisor</h2>
-<p>The last question is: Who watches the watchmen? Crontab does. Thankfully you
-cannot run the <code>supervisord</code> command twice - it would warn you that another
-instance is already running. Therefore we can safely schedule a cronjob to run
-<code>supervisord</code> every five minutes:</p>
-<div class="codehilite"><pre><span class="o">*/</span>5 <span class="o">*</span> <span class="o">*</span> <span class="o">*</span> <span class="o">*</span> <span class="o">~/</span><span class="n">bin</span><span class="o">/</span><span class="n">supervisord</span> <span class="o">&gt;</span> $<span class="n">HOME</span><span class="o">/</span><span class="n">mylogs</span><span class="o">/</span><span class="n">cron</span><span class="o">/</span><span class="n">supervisord</span><span class="p">.</span><span class="nb">log</span> 2<span class="o">&gt;&amp;</span>1
-</pre></div>
-
-
-<h2>Manage solr</h2>
-<p>If you ever need to start, stop or restart solr, you can do so via
-<code>supervisorctl start|stop|restart solr</code>.</p>
-<p>You could also just run <code>supervisorctl</code> and would get into a manage console.
-Then type <code>help</code> and see what commands are available. There seems to be an
-<a href="https://github.com/Supervisor/supervisor/issues/121">open bug</a> with the
-<code>reload</code> command at the moment, so better don't use that one for the time
-being.</p>
-<h2>Bonus: Fabfile to rebuild the index</h2>
-<p>Every now and then you will introduce changes to your models and your search
-index that will require a rebuild of the index. I like to automate that with
-a Fabric task. Here it is:</p>
-<div class="codehilite"><pre><span class="k">def</span> <span class="nf">run_rebuild_index</span><span class="p">():</span>
-    <span class="sd">&quot;&quot;&quot;Rebuilds the Solr index on the server.&quot;&quot;&quot;</span>
-    <span class="n">run</span><span class="p">(</span><span class="s">&#39;supervisorctl stop solr&#39;</span><span class="p">)</span>
-    <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
-    <span class="n">run</span><span class="p">(</span><span class="s">&#39;workon envname &amp;&amp; $HOME/webapps/django/myproject/manage.py build_solr_schema &gt; $HOME/opt/apache-solr-3.5.0/example/solr/conf/schema.xml&#39;</span><span class="p">)</span>
-    <span class="n">run</span><span class="p">(</span><span class="s">&#39;supervisorctl start solr&#39;</span><span class="p">)</span>
-    <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
-    <span class="n">run</span><span class="p">(</span><span class="s">&#39;workon envname &amp;&amp; $HOME/webapps/django/myproject/manage.py rebuild_index --noinput&#39;</span><span class="p">)</span>
-</pre></div><p>There are <a href="./2013/01/solr.html#disqus_thread">comments</a>.</p>                </article>
-                            </aside><!-- /#featured -->
-                            <section id="content" class="body">
-                    <h1>Other articles</h1>
-                    <hr />
-                    <ol id="posts-list" class="hfeed">
-                                                
+the same machine could communicate with my own Circus ...</p>
+                <a class="readmore" href="./2013/01/solr.html">read more</a>
+                <p>There are <a href="./2013/01/solr.html#disqus_thread">comments</a>.</p>                </div><!-- /.entry-content -->
+            </article></li>
+                            
 
                  
                         <li><article class="hentry">    
@@ -406,38 +487,9 @@ closing keynote on "Diversity as a Dependency".</p>
                 <a class="readmore" href="./2012/06/diversity.html">read more</a>
                 <p>There are <a href="./2012/06/diversity.html#disqus_thread">comments</a>.</p>                </div><!-- /.entry-content -->
             </article></li>
-                            
-
-                 
-                        <li><article class="hentry">    
-                <header>
-                    <h1><a href="./2012/06/eafp.html" rel="bookmark"
-                           title="Permalink to PyCon APAC 2012 - Keynote">PyCon APAC 2012 - Keynote</a></h1>
-                </header>
-                
-                <div class="entry-content">
-                <footer class="post-info">
-        <abbr class="published" title="2012-06-08T00:00:00">
-                Fri 08 June 2012
-        </abbr>
-
-                <address class="vcard author">
-                By <a class="url fn" href="./author/martin-brochhaus.html">Martin Brochhaus</a>
-        </address>
-        <p>In <a href="./category/blog.html">Blog</a>. </p>
-<p>tags: <a href="./tag/python.html">python</a><a href="./tag/pycon.html">pycon</a><a href="./tag/conferences.html">conferences</a></p>
-</footer><!-- /.post-info -->                <p>Here are my live notes on <a href="https://plus.google.com/106273672060692715136/about">Alex Martelli's</a>
-keynote "Permission for Forgiveness".</p>
-<p><em>Edit</em>: Here is the video: https://www.youtube.com/watch?v=lEtyYEKqUlk</p>
-<p>He starts with a joke about the font in his presentation which looks like
-Comic Sans but is actually Apple's Chalkboard.</p>
-<p>We learn about ...</p>
-                <a class="readmore" href="./2012/06/eafp.html">read more</a>
-                <p>There are <a href="./2012/06/eafp.html#disqus_thread">comments</a>.</p>                </div><!-- /.entry-content -->
-            </article></li>
                             </ol><!-- /#posts-list -->
                             <p class="paginator">
-        Page 1 / 2
+        Page 1 / 3
             <a href="./index2.html">&raquo;</a>
     </p>
                         </section><!-- /#content -->

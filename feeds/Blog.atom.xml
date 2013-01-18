@@ -1,5 +1,162 @@
 <?xml version="1.0" encoding="utf-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom"><title>martinbrochhaus.com</title><link href="http://www.martinbrochhaus.com/" rel="alternate"></link><link href="http://www.martinbrochhaus.com/feeds/Blog.atom.xml" rel="self"></link><id>http://www.martinbrochhaus.com/</id><updated>2013-01-10T00:00:00+08:00</updated><entry><title>Daemonizing Solr on Webfaction with Supervisor</title><link href="http://www.martinbrochhaus.com/2013/01/solr.html" rel="alternate"></link><updated>2013-01-10T00:00:00+08:00</updated><author><name>Martin Brochhaus</name></author><id>tag:www.martinbrochhaus.com,2013-01-10:2013/01/solr.html</id><summary type="html">&lt;p&gt;A while ago I wrote how to &lt;a href="http://martinbrochhaus.com/2012/07/circus.html"&gt;daemonize Solr on Webfaction with Circus &lt;/a&gt;.&lt;/p&gt;
+<feed xmlns="http://www.w3.org/2005/Atom"><title>martinbrochhaus.com</title><link href="http://www.martinbrochhaus.com/" rel="alternate"></link><link href="http://www.martinbrochhaus.com/feeds/Blog.atom.xml" rel="self"></link><id>http://www.martinbrochhaus.com/</id><updated>2013-01-17T00:00:00+08:00</updated><entry><title>How to manage Twitter Bootstrap</title><link href="http://www.martinbrochhaus.com/2013/01/bootstrap.html" rel="alternate"></link><updated>2013-01-17T00:00:00+08:00</updated><author><name>Martin Brochhaus</name></author><id>tag:www.martinbrochhaus.com,2013-01-17:2013/01/bootstrap.html</id><summary type="html">&lt;p&gt;Without any doubt, &lt;a href="http://twitter.github.com/bootstrap/"&gt;Twitter's Bootstrap&lt;/a&gt;
+is awesome. So far I am using it in more than 10 projects and I don't regret
+anything.&lt;/p&gt;
+&lt;p&gt;Unfortunately, Bootstrap has one major flaw: You can't really add it to your
+project and manipulate it, without editing the source files. Bootstrap offers
+a download page where you can chose the parts that you want and where you can
+enter values for all the variables - but I don't know who on earth works like
+this. I usually don't know about exact color values for my project until
+shortly before go-live and I certainly don't want to come back to the download
+page and download new versions of bootstrap over and over again.&lt;/p&gt;
+&lt;p&gt;Here is what I want:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;I want to add Bootstrap to my project and work with the latest files from
+  the github repo&lt;/li&gt;
+&lt;li&gt;Yet I don't want to manipulate them, because&lt;/li&gt;
+&lt;li&gt;I want to be able to update my bootstrap sources at any time without merge
+  conflicts&lt;/li&gt;
+&lt;li&gt;Updating should be a no-brainer&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;My solution might not be the most elegant, but so far it seems to get the job
+done:&lt;/p&gt;
+&lt;h2&gt;Add Bootstrap as a submodule&lt;/h2&gt;
+&lt;p&gt;First I add bootstrap as a git submodule to my Django projects:&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span class="n"&gt;git&lt;/span&gt; &lt;span class="n"&gt;submodule&lt;/span&gt; &lt;span class="n"&gt;add&lt;/span&gt; &lt;span class="n"&gt;git&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="o"&gt;//&lt;/span&gt;&lt;span class="n"&gt;github&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;com&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;&lt;span class="n"&gt;twitter&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;&lt;span class="n"&gt;bootstrap&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;git&lt;/span&gt; &lt;span class="n"&gt;myproject&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;&lt;span class="n"&gt;submodules&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;&lt;span class="n"&gt;bootstrap&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;It is important to add the submodule to a path inside your project root. This
+way you can place symlinks easily with all relative paths.&lt;/p&gt;
+&lt;h2&gt;Setup your css folder&lt;/h2&gt;
+&lt;p&gt;Surely you will have a folder that holds your project's CSS files somewhere in
+your project. For my Django projects that is usually:&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span class="n"&gt;myproject&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;&lt;span class="n"&gt;myproject&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;&lt;span class="n"&gt;static&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;&lt;span class="n"&gt;css&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;Inside of this folder I like to create a &lt;code&gt;libs&lt;/code&gt; folder which holds CSS files
+of third party plugins or frameworks that I use. In our case this would be
+bootstrap, so let's create a bootstrap folder:&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span class="n"&gt;mkdir&lt;/span&gt; &lt;span class="n"&gt;myproject&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;&lt;span class="n"&gt;myproject&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;&lt;span class="n"&gt;static&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;&lt;span class="n"&gt;css&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;&lt;span class="n"&gt;libs&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;&lt;span class="n"&gt;bootstrap&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;h2&gt;Symlink the bootstrap files&lt;/h2&gt;
+&lt;p&gt;So here is the first part of the trick. Inside of the &lt;code&gt;bootstrap&lt;/code&gt; which we have
+just created, we symlink all the &lt;code&gt;.less&lt;/code&gt; files of the Bootstrap framework:&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span class="n"&gt;cd&lt;/span&gt; &lt;span class="n"&gt;myproject&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;&lt;span class="n"&gt;myproject&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;&lt;span class="n"&gt;static&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;&lt;span class="n"&gt;css&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;&lt;span class="n"&gt;libs&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;&lt;span class="n"&gt;bootstrap&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;
+&lt;span class="n"&gt;ln&lt;/span&gt; &lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="n"&gt;s&lt;/span&gt; &lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="o"&gt;./&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="o"&gt;./&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="o"&gt;./&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="o"&gt;./&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="o"&gt;./&lt;/span&gt;&lt;span class="n"&gt;submodules&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;&lt;span class="n"&gt;bootstrap&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;&lt;span class="n"&gt;less&lt;/span&gt;&lt;span class="o"&gt;/*&lt;/span&gt; &lt;span class="p"&gt;.&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;It would be better to just symlink the whole &lt;code&gt;less&lt;/code&gt; folder instead of all files
+but unfortunately &lt;code&gt;lessc&lt;/code&gt; is not able to follow such symlinks and would fail
+to compile the &lt;code&gt;bootstrap.less&lt;/code&gt; file.&lt;/p&gt;
+&lt;h2&gt;Prepare the working files&lt;/h2&gt;
+&lt;p&gt;Here comes the second part of the trick. We will create copies of the files
+&lt;code&gt;bootstrap.less&lt;/code&gt; and &lt;code&gt;responsive.less&lt;/code&gt;:&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span class="n"&gt;cd&lt;/span&gt; &lt;span class="n"&gt;myproject&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;&lt;span class="n"&gt;myproject&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;&lt;span class="n"&gt;static&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;&lt;span class="n"&gt;css&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;
+&lt;span class="n"&gt;cp&lt;/span&gt; &lt;span class="n"&gt;libs&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;&lt;span class="n"&gt;bootstrap&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;&lt;span class="n"&gt;bootstrap&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;less&lt;/span&gt; &lt;span class="p"&gt;.&lt;/span&gt;
+&lt;span class="n"&gt;cp&lt;/span&gt; &lt;span class="n"&gt;libs&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;&lt;span class="n"&gt;bootstrap&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;&lt;span class="n"&gt;responsive&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;less&lt;/span&gt; &lt;span class="p"&gt;.&lt;/span&gt;
+&lt;span class="n"&gt;touch&lt;/span&gt; &lt;span class="n"&gt;my&lt;/span&gt;&lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="n"&gt;variables&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;less&lt;/span&gt;
+&lt;span class="n"&gt;touch&lt;/span&gt; &lt;span class="n"&gt;styles&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;less&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;I know, I know, we have just symlinked them, why create another copy now? The
+reason is that we won't use the symlinks (you could delete them). Instead
+we will make a three simple changes to those two files. First we need to change
+the paths to all the imported &lt;code&gt;.less&lt;/code&gt; files:&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span class="n"&gt;sed&lt;/span&gt; &lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="nb"&gt;i&lt;/span&gt; &lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="n"&gt;e&lt;/span&gt; &lt;span class="s"&gt;&amp;#39;s/import &amp;quot;/import &amp;quot;libs\/bootstrap\//g&amp;#39;&lt;/span&gt; &lt;span class="n"&gt;bootstrap&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;less&lt;/span&gt;
+&lt;span class="n"&gt;sed&lt;/span&gt; &lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="nb"&gt;i&lt;/span&gt; &lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="n"&gt;e&lt;/span&gt; &lt;span class="s"&gt;&amp;#39;s/import &amp;quot;/import &amp;quot;libs\/bootstrap\//g&amp;#39;&lt;/span&gt; &lt;span class="n"&gt;responsive&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;less&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;Next we will add an import of our own variables file to both files. The import
+should come right after the import of the original &lt;code&gt;variables.less&lt;/code&gt;:&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span class="cp"&gt;# Excerpt from your bootstrap.less copy:&lt;/span&gt;
+
+&lt;span class="p"&gt;...&lt;/span&gt;
+&lt;span class="c1"&gt;// CSS Reset&lt;/span&gt;
+&lt;span class="err"&gt;@&lt;/span&gt;&lt;span class="n"&gt;import&lt;/span&gt; &lt;span class="s"&gt;&amp;quot;libs/bootstrap/reset.less&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+
+&lt;span class="c1"&gt;// Core variables and mixins&lt;/span&gt;
+&lt;span class="err"&gt;@&lt;/span&gt;&lt;span class="n"&gt;import&lt;/span&gt; &lt;span class="s"&gt;&amp;quot;libs/bootstrap/variables.less&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+
+&lt;span class="err"&gt;@&lt;/span&gt;&lt;span class="n"&gt;import&lt;/span&gt; &lt;span class="s"&gt;&amp;quot;my-variables.less&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt; &lt;span class="c1"&gt;// Our own variables overrides&lt;/span&gt;
+
+&lt;span class="err"&gt;@&lt;/span&gt;&lt;span class="n"&gt;import&lt;/span&gt; &lt;span class="s"&gt;&amp;quot;libs/bootstrap/mixins.less&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;span class="p"&gt;...&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;Finally we will include our very own &lt;code&gt;styles.less&lt;/code&gt; at the bottom of
+&lt;code&gt;bootstrap.less&lt;/code&gt;. Styles in this file would override everything else from
+bootstrap:&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span class="cp"&gt;# Excerpt from your bootstrap.less copy:&lt;/span&gt;
+
+&lt;span class="p"&gt;...&lt;/span&gt;
+&lt;span class="c1"&gt;// Utility classes&lt;/span&gt;
+&lt;span class="err"&gt;@&lt;/span&gt;&lt;span class="n"&gt;import&lt;/span&gt; &lt;span class="s"&gt;&amp;quot;libs/bootstrap/utilities.less&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt; &lt;span class="c1"&gt;// Has to be last to override when necessary&lt;/span&gt;
+
+&lt;span class="c1"&gt;// Our own stuff&lt;/span&gt;
+&lt;span class="err"&gt;@&lt;/span&gt;&lt;span class="n"&gt;import&lt;/span&gt; &lt;span class="s"&gt;&amp;quot;styles.less&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;Repeat the last two steps for &lt;code&gt;responsive.less&lt;/code&gt; as well, of course here you
+would add an import to &lt;code&gt;styles-responsive.less&lt;/code&gt; instead of &lt;code&gt;styles.less&lt;/code&gt; at the 
+bottom.&lt;/p&gt;
+&lt;h2&gt;How to work with this setup?&lt;/h2&gt;
+&lt;p&gt;That's a whole lot of files to deal with, but the rules are actually quite
+simple:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Never touch anything in the &lt;code&gt;/libs/bootstrap/&lt;/code&gt; folder&lt;/li&gt;
+&lt;li&gt;If you would like to change the value of any of Bootstrap's
+  &lt;a href="https://github.com/twitter/bootstrap/blob/master/less/variables.less"&gt;variables&lt;/a&gt;,
+  override that same variable in our &lt;code&gt;my-varibales.less&lt;/code&gt; file.&lt;/li&gt;
+&lt;li&gt;You can even invent new variables here.&lt;/li&gt;
+&lt;li&gt;Whenever you would like to add project specific styles for your site, add
+  them to &lt;code&gt;styles.less&lt;/code&gt; and &lt;code&gt;responsive-styles.less&lt;/code&gt;.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;When you are done, compile the files &lt;code&gt;bootstrap.less&lt;/code&gt; and &lt;code&gt;responsive.less&lt;/code&gt;. I
+like to save the output as &lt;code&gt;bootstrap.css&lt;/code&gt; and &lt;code&gt;bootstrap-responsive.css&lt;/code&gt; and
+those two files are the ones that I link in my templates.&lt;/p&gt;
+&lt;h2&gt;Why is this awesome?&lt;/h2&gt;
+&lt;p&gt;First of all, you will have your project specific overrides included in the
+rest of the Bootstrap framework and don't need to link it in your templates.
+This saves you one request.&lt;/p&gt;
+&lt;p&gt;Secondly, we are symlinking to a git submodule, so if a new version or even
+just a minor bugfix is released, we can just &lt;code&gt;cd&lt;/code&gt; into the
+&lt;code&gt;submodules/bootstrap&lt;/code&gt; folder and run &lt;code&gt;git pull&lt;/code&gt;. After that we need to
+re-compile our files and that's it - we just updated our Bootstrap files.&lt;/p&gt;
+&lt;h2&gt;What can go wrong?&lt;/h2&gt;
+&lt;p&gt;There is one thing that can and will still go wrong: The two file that we have
+modified and copied (&lt;code&gt;bootstrap.less&lt;/code&gt; and &lt;code&gt;responsive.less&lt;/code&gt;) might differ
+when you pull the latest Bootstrap version. Especially when a major new release
+happened, there will most definitely be new imports in those files. Luckily
+those files are really simple, so you can probably spot the new import at a
+glance. A new import would also mean that there is a new file that should be
+symlinked.&lt;/p&gt;
+&lt;p&gt;So in this case, the best workflow would be this:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Delete all symlinks and re-create them&lt;/li&gt;
+&lt;li&gt;Copy &lt;code&gt;bootstrap.less&lt;/code&gt; and &lt;code&gt;responsive.less&lt;/code&gt; again&lt;/li&gt;
+&lt;li&gt;Run the &lt;code&gt;sed&lt;/code&gt; commands again&lt;/li&gt;
+&lt;li&gt;Add the imports to &lt;code&gt;my-variables.less&lt;/code&gt; and &lt;code&gt;styles.less&lt;/code&gt; again.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;You could even create a shell script for this task, therefore I consider it
+a no-brainer :)&lt;/p&gt;
+&lt;h2&gt;tl;dr&lt;/h2&gt;
+&lt;p&gt;We want to use bootstrap as a git submodule because then we can update it
+simply via &lt;code&gt;git pull&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;We can't really touch any of the sourcefiles because that would result in merge
+conflicts when we pull a new version, but the &lt;code&gt;variables.less&lt;/code&gt; file is full of
+gold and really needs to be changed.&lt;/p&gt;
+&lt;p&gt;As a solution, we just create our own &lt;code&gt;my-variables.less&lt;/code&gt; file and import it
+in copies of &lt;code&gt;bootstrap.less&lt;/code&gt; and &lt;code&gt;responsive.less&lt;/code&gt; - those files are just as
+likely to change but if they do, we can re-create them in no time.&lt;/p&gt;</summary><category term="css"></category><category term="bootstrap"></category><category term="howto"></category></entry><entry><title>Daemonizing Solr on Webfaction with Supervisor</title><link href="http://www.martinbrochhaus.com/2013/01/solr.html" rel="alternate"></link><updated>2013-01-10T00:00:00+08:00</updated><author><name>Martin Brochhaus</name></author><id>tag:www.martinbrochhaus.com,2013-01-10:2013/01/solr.html</id><summary type="html">&lt;p&gt;A while ago I wrote how to &lt;a href="http://martinbrochhaus.com/2012/07/circus.html"&gt;daemonize Solr on Webfaction with Circus &lt;/a&gt;.&lt;/p&gt;
 &lt;p&gt;Unfortunately this solution has not proven to be as stable as I wished, plus
 I think there is a security issue because in theory other Webfaction users on
 the same machine could communicate with my own Circus instance.&lt;/p&gt;
