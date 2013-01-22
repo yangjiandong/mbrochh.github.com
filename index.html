@@ -58,8 +58,142 @@
 
                             <aside id="featured" class="body">
                 <article>
-                    <h1 class="entry-title"><a href="./2013/01/bootstrap.html">How to manage Twitter Bootstrap</a></h1> 
+                    <h1 class="entry-title"><a href="./2013/01/factory-boy.html">Test Models with Generic Foreign Keys and Factory Boy</a></h1> 
                     <footer class="post-info">
+        <abbr class="published" title="2013-01-22T00:00:00">
+                Tue 22 January 2013
+        </abbr>
+
+                <address class="vcard author">
+                By <a class="url fn" href="./author/martin-brochhaus.html">Martin Brochhaus</a>
+        </address>
+        <p>In <a href="./category/blog.html">Blog</a>. </p>
+<p>tags: <a href="./tag/python.html">python</a><a href="./tag/django.html">django</a><a href="./tag/testing.html">testing</a><a href="./tag/howto.html">howto</a></p>
+</footer><!-- /.post-info --><p>Let's say you are writing a reusable Django app and your app has a model with
+a generic foreign key. An example could be a messaging app where messages can
+attached to any other object (when you think about Facebook, a message can
+be sent to another User, or to his profile timeline, or to a status update
+and so on):</p>
+<div class="codehilite"><pre><span class="k">class</span> <span class="nc">Message</span><span class="p">(</span><span class="n">models</span><span class="o">.</span><span class="n">Model</span><span class="p">):</span>
+    <span class="n">user</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">ForeignKey</span><span class="p">(</span><span class="s">&#39;auth.User&#39;</span><span class="p">)</span>
+    <span class="n">text</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">TextField</span><span class="p">(</span><span class="n">max_length</span><span class="o">=</span><span class="mi">4000</span><span class="p">)</span>
+    <span class="n">creation_date</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">DateTimeField</span><span class="p">(</span><span class="n">auto_now_add</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+
+    <span class="c"># Generic FK to the object this message is attached to</span>
+    <span class="n">content_type</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">ForeignKey</span><span class="p">(</span><span class="n">ContentType</span><span class="p">)</span>
+    <span class="n">object_id</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">PositiveIntegerField</span><span class="p">()</span>
+    <span class="n">content_object</span> <span class="o">=</span> <span class="n">generic</span><span class="o">.</span><span class="n">GenericForeignKey</span><span class="p">(</span><span class="s">&#39;content_type&#39;</span><span class="p">,</span> <span class="s">&#39;object_id&#39;</span><span class="p">)</span>
+</pre></div>
+
+
+<p>I like to maintain 100% code coverage in all my projects, so I will even test
+seemingly mundane things like instantiation and saving of all my models. A test
+for this <code>Message</code> model could look like this:</p>
+<div class="codehilite"><pre><span class="kn">from</span> <span class="nn">django.test</span> <span class="kn">import</span> <span class="n">TestCase</span>
+<span class="kn">from</span> <span class="nn">messages.tests.factories</span> <span class="kn">import</span> <span class="n">MessageFactory</span>
+
+<span class="k">class</span> <span class="nc">MessageTestCase</span><span class="p">(</span><span class="n">TestCase</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">test_model</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Should be able to instantiate and save the model.&quot;&quot;&quot;</span>
+        <span class="n">obj</span> <span class="o">=</span> <span class="n">MessageFactory</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertTrue</span><span class="p">(</span><span class="n">obj</span><span class="o">.</span><span class="n">pk</span><span class="p">)</span>
+</pre></div>
+
+
+<p>Granted, this is a very simple test but as the model grows this test case would
+obviously grow as well. The interesting question is: How can we write the
+<code>MessageFactory</code>.</p>
+<p>The first thought would be to just use one of our other existing models (i.e.
+the Timeline model, if we were cloning Facebook). Unfortunately we can't do
+that because we are writing a reusable app here and the reusable app should be
+distributed on PyPi and therefore doesn't know anything about any of your other
+app's models.</p>
+<p>So we must create a <code>DummyModel</code> inside of our reusable app. You could put that
+model into your reusable app's <code>models.py</code> but then you would create a useless
+table when you run <code>syncdb</code> or <code>migrate</code>. So the better solution is to create
+a <code>test_app</code> inside of your reusable app and only add that app to
+<code>INSTALLED_APPS</code> in your <code>test_settings.py</code>.</p>
+<p>So let's create a few new files:</p>
+<div class="codehilite"><pre>yourapp/tests/factories.py
+yourapp/tests/models_tests.py
+yourapp/tests/test_app/__init__.py
+yourapp/tests/test_app/models.py
+</pre></div>
+
+
+<p>Your test app's <code>models.py</code> should look like this:</p>
+<div class="codehilite"><pre><span class="k">class</span> <span class="nc">DummyModel</span><span class="p">(</span><span class="n">models</span><span class="o">.</span><span class="n">Model</span><span class="p">):</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span><span class="n">max_length</span><span class="o">=</span><span class="mi">256</span><span class="p">,</span> <span class="n">blank</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+</pre></div>
+
+
+<p>Now we can create our reusable app's factory. There are three things to notice
+here:</p>
+<ol>
+<li>We will also create a factory for the <code>DummyModel</code> because then we can
+   use it as a sub-factory. And who knows, maybe that model will get more
+   complex as your app grows more complex as well.</li>
+<li>We are using the <a href="http://django-libs.readthedocs.org/en/latest/factories.html#factories">UserFactory of django-libs</a>.
+   django-libs is a collection of useful stuff that I need in almost all my
+   Django projects. Obviously I need to create <code>User</code> instances all the time
+   in my tests, therefore django-libs provides a <code>UserFactory</code>.</li>
+<li>The <code>MessageFactory</code> uses the <code>content_object</code> field to add the generic
+   foreign key to our <code>DummyModel</code>, which is quite convenient. Thankfully, we
+   don't have to wrestle around with the <code>content_type</code> and <code>object_id</code> fields
+   of the generic foreign key.</li>
+</ol>
+<p>Here is how your <code>factories.py</code> should look like:</p>
+<div class="codehilite"><pre><span class="kn">import</span> <span class="nn">factory</span>
+<span class="kn">from</span> <span class="nn">django_libs.tests.factories</span> <span class="kn">import</span> <span class="n">UserFactory</span>
+<span class="kn">from</span> <span class="nn">yourapp.tests.test_app.models</span> <span class="kn">import</span> <span class="n">DummyModel</span>
+<span class="kn">from</span> <span class="nn">yourapp.models</span> <span class="kn">import</span> <span class="n">Message</span>
+
+<span class="k">class</span> <span class="nc">DummyModelFactory</span><span class="p">(</span><span class="n">factory</span><span class="o">.</span><span class="n">Factory</span><span class="p">):</span>
+    <span class="n">FACTORY_FOR</span> <span class="o">=</span> <span class="n">DummyModel</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="s">&#39;Foobar&#39;</span>
+
+<span class="k">class</span> <span class="nc">MessageFactory</span><span class="p">(</span><span class="n">factory</span><span class="o">.</span><span class="n">Factory</span><span class="p">):</span>
+    <span class="n">FACTORY_FOR</span> <span class="o">=</span> <span class="n">Message</span>
+    <span class="n">user</span> <span class="o">=</span> <span class="n">factory</span><span class="o">.</span><span class="n">SubFactory</span><span class="p">(</span><span class="n">UserFactory</span><span class="p">)</span>
+    <span class="n">text</span> <span class="o">=</span> <span class="s">&#39;Hello world&#39;</span>
+    <span class="n">creation_date</span> <span class="o">=</span> <span class="n">factory</span><span class="o">.</span><span class="n">LazyAttribute</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">now</span><span class="p">())</span>
+    <span class="n">content_object</span> <span class="o">=</span> <span class="n">factory</span><span class="o">.</span><span class="n">SubFactory</span><span class="p">(</span><span class="n">DummyModelFactory</span><span class="p">)</span>
+</pre></div>
+
+
+<p>Now, whenever you want to create a <code>Message</code> in your tests, just call
+<code>MessageFactory()</code> and there you are. Your message will be tied to an
+instance of a <code>DummyModel</code> which will be created automagically as well.</p>
+<p>One last problem is left: When you run your tests, you will get an error
+message saying that there is no table for the <code>DummyModel</code> in your test
+database. In order to solve this you should create a <code>test_settings.py</code> which
+adds the <code>test_app</code> to your <code>INSTALLED_APPS</code>:</p>
+<div class="codehilite"><pre><span class="kn">from</span> <span class="nn">myproject.settings</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="n">INSTALLED_APPS</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s">&#39;yourapp.tests.test_app&#39;</span><span class="p">)</span>
+</pre></div>
+
+
+<p>Of course your <code>test_settings.py</code> needs a lot of other stuff. To speed up the
+tests you could to change the db backend to an in-memory sqlite database and
+for better test case recovery you could use a NoseTestRunner. Check out
+my <a href="https://github.com/bitmazk/django-libs/blob/master/django_libs/settings/test_settings.py">test settings in django-libs</a>
+for an example that I use in all my projects.</p><p>There are <a href="./2013/01/factory-boy.html#disqus_thread">comments</a>.</p>                </article>
+                            </aside><!-- /#featured -->
+                            <section id="content" class="body">
+                    <h1>Other articles</h1>
+                    <hr />
+                    <ol id="posts-list" class="hfeed">
+                                                
+
+                 
+                        <li><article class="hentry">    
+                <header>
+                    <h1><a href="./2013/01/bootstrap.html" rel="bookmark"
+                           title="Permalink to How to manage Twitter Bootstrap">How to manage Twitter Bootstrap</a></h1>
+                </header>
+                
+                <div class="entry-content">
+                <footer class="post-info">
         <abbr class="published" title="2013-01-17T00:00:00">
                 Thu 17 January 2013
         </abbr>
@@ -69,170 +203,15 @@
         </address>
         <p>In <a href="./category/blog.html">Blog</a>. </p>
 <p>tags: <a href="./tag/css.html">css</a><a href="./tag/bootstrap.html">bootstrap</a><a href="./tag/howto.html">howto</a></p>
-</footer><!-- /.post-info --><p>Without any doubt, <a href="http://twitter.github.com/bootstrap/">Twitter's Bootstrap</a>
+</footer><!-- /.post-info -->                <p>Without any doubt, <a href="http://twitter.github.com/bootstrap/">Twitter's Bootstrap</a>
 is awesome. So far I am using it in more than 10 projects and I don't regret
 anything.</p>
 <p>Unfortunately, Bootstrap has one major flaw: You can't really add it to your
-project and manipulate it, without editing the source files. Bootstrap offers
-a download page where you can chose the parts that you want and where you can
-enter values for all the variables - but I don't know who on earth works like
-this. I usually don't know about exact color values for my project until
-shortly before go-live and I certainly don't want to come back to the download
-page and download new versions of bootstrap over and over again.</p>
-<p>Here is what I want:</p>
-<ul>
-<li>I want to add Bootstrap to my project and work with the latest files from
-  the github repo</li>
-<li>Yet I don't want to manipulate them, because</li>
-<li>I want to be able to update my bootstrap sources at any time without merge
-  conflicts</li>
-<li>Updating should be a no-brainer</li>
-</ul>
-<p>My solution might not be the most elegant, but so far it seems to get the job
-done:</p>
-<h2>Add Bootstrap as a submodule</h2>
-<p>First I add bootstrap as a git submodule to my Django projects:</p>
-<div class="codehilite"><pre><span class="n">git</span> <span class="n">submodule</span> <span class="n">add</span> <span class="n">git</span><span class="p">:</span><span class="o">//</span><span class="n">github</span><span class="p">.</span><span class="n">com</span><span class="o">/</span><span class="n">twitter</span><span class="o">/</span><span class="n">bootstrap</span><span class="p">.</span><span class="n">git</span> <span class="n">myproject</span><span class="o">/</span><span class="n">submodules</span><span class="o">/</span><span class="n">bootstrap</span>
-</pre></div>
-
-
-<p>It is important to add the submodule to a path inside your project root. This
-way you can place symlinks easily with all relative paths.</p>
-<h2>Setup your css folder</h2>
-<p>Surely you will have a folder that holds your project's CSS files somewhere in
-your project. For my Django projects that is usually:</p>
-<div class="codehilite"><pre><span class="n">myproject</span><span class="o">/</span><span class="n">myproject</span><span class="o">/</span><span class="n">static</span><span class="o">/</span><span class="n">css</span><span class="o">/</span>
-</pre></div>
-
-
-<p>Inside of this folder I like to create a <code>libs</code> folder which holds CSS files
-of third party plugins or frameworks that I use. In our case this would be
-bootstrap, so let's create a bootstrap folder:</p>
-<div class="codehilite"><pre><span class="n">mkdir</span> <span class="n">myproject</span><span class="o">/</span><span class="n">myproject</span><span class="o">/</span><span class="n">static</span><span class="o">/</span><span class="n">css</span><span class="o">/</span><span class="n">libs</span><span class="o">/</span><span class="n">bootstrap</span><span class="o">/</span>
-</pre></div>
-
-
-<h2>Symlink the bootstrap files</h2>
-<p>So here is the first part of the trick. Inside of the <code>bootstrap</code> which we have
-just created, we symlink all the <code>.less</code> files of the Bootstrap framework:</p>
-<div class="codehilite"><pre><span class="n">cd</span> <span class="n">myproject</span><span class="o">/</span><span class="n">myproject</span><span class="o">/</span><span class="n">static</span><span class="o">/</span><span class="n">css</span><span class="o">/</span><span class="n">libs</span><span class="o">/</span><span class="n">bootstrap</span><span class="o">/</span>
-<span class="n">ln</span> <span class="o">-</span><span class="n">s</span> <span class="p">.</span><span class="o">./</span><span class="p">.</span><span class="o">./</span><span class="p">.</span><span class="o">./</span><span class="p">.</span><span class="o">./</span><span class="p">.</span><span class="o">./</span><span class="n">submodules</span><span class="o">/</span><span class="n">bootstrap</span><span class="o">/</span><span class="n">less</span><span class="o">/*</span> <span class="p">.</span>
-</pre></div>
-
-
-<p>It would be better to just symlink the whole <code>less</code> folder instead of all files
-but unfortunately <code>lessc</code> is not able to follow such symlinks and would fail
-to compile the <code>bootstrap.less</code> file.</p>
-<h2>Prepare the working files</h2>
-<p>Here comes the second part of the trick. We will create copies of the files
-<code>bootstrap.less</code> and <code>responsive.less</code>:</p>
-<div class="codehilite"><pre><span class="n">cd</span> <span class="n">myproject</span><span class="o">/</span><span class="n">myproject</span><span class="o">/</span><span class="n">static</span><span class="o">/</span><span class="n">css</span><span class="o">/</span>
-<span class="n">cp</span> <span class="n">libs</span><span class="o">/</span><span class="n">bootstrap</span><span class="o">/</span><span class="n">bootstrap</span><span class="p">.</span><span class="n">less</span> <span class="p">.</span>
-<span class="n">cp</span> <span class="n">libs</span><span class="o">/</span><span class="n">bootstrap</span><span class="o">/</span><span class="n">responsive</span><span class="p">.</span><span class="n">less</span> <span class="p">.</span>
-<span class="n">touch</span> <span class="n">my</span><span class="o">-</span><span class="n">variables</span><span class="p">.</span><span class="n">less</span>
-<span class="n">touch</span> <span class="n">styles</span><span class="p">.</span><span class="n">less</span>
-</pre></div>
-
-
-<p>I know, I know, we have just symlinked them, why create another copy now? The
-reason is that we won't use the symlinks (you could delete them). Instead
-we will make a three simple changes to those two files. First we need to change
-the paths to all the imported <code>.less</code> files:</p>
-<div class="codehilite"><pre><span class="n">sed</span> <span class="o">-</span><span class="nb">i</span> <span class="o">-</span><span class="n">e</span> <span class="s">&#39;s/import &quot;/import &quot;libs\/bootstrap\//g&#39;</span> <span class="n">bootstrap</span><span class="p">.</span><span class="n">less</span>
-<span class="n">sed</span> <span class="o">-</span><span class="nb">i</span> <span class="o">-</span><span class="n">e</span> <span class="s">&#39;s/import &quot;/import &quot;libs\/bootstrap\//g&#39;</span> <span class="n">responsive</span><span class="p">.</span><span class="n">less</span>
-</pre></div>
-
-
-<p>Next we will add an import of our own variables file to both files. The import
-should come right after the import of the original <code>variables.less</code>:</p>
-<div class="codehilite"><pre><span class="cp"># Excerpt from your bootstrap.less copy:</span>
-
-<span class="p">...</span>
-<span class="c1">// CSS Reset</span>
-<span class="err">@</span><span class="n">import</span> <span class="s">&quot;libs/bootstrap/reset.less&quot;</span><span class="p">;</span>
-
-<span class="c1">// Core variables and mixins</span>
-<span class="err">@</span><span class="n">import</span> <span class="s">&quot;libs/bootstrap/variables.less&quot;</span><span class="p">;</span>
-
-<span class="err">@</span><span class="n">import</span> <span class="s">&quot;my-variables.less&quot;</span><span class="p">;</span> <span class="c1">// Our own variables overrides</span>
-
-<span class="err">@</span><span class="n">import</span> <span class="s">&quot;libs/bootstrap/mixins.less&quot;</span><span class="p">;</span>
-<span class="p">...</span>
-</pre></div>
-
-
-<p>Finally we will include our very own <code>styles.less</code> at the bottom of
-<code>bootstrap.less</code>. Styles in this file would override everything else from
-bootstrap:</p>
-<div class="codehilite"><pre><span class="cp"># Excerpt from your bootstrap.less copy:</span>
-
-<span class="p">...</span>
-<span class="c1">// Utility classes</span>
-<span class="err">@</span><span class="n">import</span> <span class="s">&quot;libs/bootstrap/utilities.less&quot;</span><span class="p">;</span> <span class="c1">// Has to be last to override when necessary</span>
-
-<span class="c1">// Our own stuff</span>
-<span class="err">@</span><span class="n">import</span> <span class="s">&quot;styles.less&quot;</span><span class="p">;</span>
-</pre></div>
-
-
-<p>Repeat the last two steps for <code>responsive.less</code> as well, of course here you
-would add an import to <code>styles-responsive.less</code> instead of <code>styles.less</code> at the 
-bottom.</p>
-<h2>How to work with this setup?</h2>
-<p>That's a whole lot of files to deal with, but the rules are actually quite
-simple:</p>
-<ul>
-<li>Never touch anything in the <code>/libs/bootstrap/</code> folder</li>
-<li>If you would like to change the value of any of Bootstrap's
-  <a href="https://github.com/twitter/bootstrap/blob/master/less/variables.less">variables</a>,
-  override that same variable in our <code>my-varibales.less</code> file.</li>
-<li>You can even invent new variables here.</li>
-<li>Whenever you would like to add project specific styles for your site, add
-  them to <code>styles.less</code> and <code>responsive-styles.less</code>.</li>
-</ul>
-<p>When you are done, compile the files <code>bootstrap.less</code> and <code>responsive.less</code>. I
-like to save the output as <code>bootstrap.css</code> and <code>bootstrap-responsive.css</code> and
-those two files are the ones that I link in my templates.</p>
-<h2>Why is this awesome?</h2>
-<p>First of all, you will have your project specific overrides included in the
-rest of the Bootstrap framework and don't need to link it in your templates.
-This saves you one request.</p>
-<p>Secondly, we are symlinking to a git submodule, so if a new version or even
-just a minor bugfix is released, we can just <code>cd</code> into the
-<code>submodules/bootstrap</code> folder and run <code>git pull</code>. After that we need to
-re-compile our files and that's it - we just updated our Bootstrap files.</p>
-<h2>What can go wrong?</h2>
-<p>There is one thing that can and will still go wrong: The two file that we have
-modified and copied (<code>bootstrap.less</code> and <code>responsive.less</code>) might differ
-when you pull the latest Bootstrap version. Especially when a major new release
-happened, there will most definitely be new imports in those files. Luckily
-those files are really simple, so you can probably spot the new import at a
-glance. A new import would also mean that there is a new file that should be
-symlinked.</p>
-<p>So in this case, the best workflow would be this:</p>
-<ul>
-<li>Delete all symlinks and re-create them</li>
-<li>Copy <code>bootstrap.less</code> and <code>responsive.less</code> again</li>
-<li>Run the <code>sed</code> commands again</li>
-<li>Add the imports to <code>my-variables.less</code> and <code>styles.less</code> again.</li>
-</ul>
-<p>You could even create a shell script for this task, therefore I consider it
-a no-brainer :)</p>
-<h2>tl;dr</h2>
-<p>We want to use bootstrap as a git submodule because then we can update it
-simply via <code>git pull</code>.</p>
-<p>We can't really touch any of the sourcefiles because that would result in merge
-conflicts when we pull a new version, but the <code>variables.less</code> file is full of
-gold and really needs to be changed.</p>
-<p>As a solution, we just create our own <code>my-variables.less</code> file and import it
-in copies of <code>bootstrap.less</code> and <code>responsive.less</code> - those files are just as
-likely to change but if they do, we can re-create them in no time.</p><p>There are <a href="./2013/01/bootstrap.html#disqus_thread">comments</a>.</p>                </article>
-                            </aside><!-- /#featured -->
-                            <section id="content" class="body">
-                    <h1>Other articles</h1>
-                    <hr />
-                    <ol id="posts-list" class="hfeed">
-                                                
+project and manipulate it, without editing the source files. Bootstrap offers ...</p>
+                <a class="readmore" href="./2013/01/bootstrap.html">read more</a>
+                <p>There are <a href="./2013/01/bootstrap.html#disqus_thread">comments</a>.</p>                </div><!-- /.entry-content -->
+            </article></li>
+                            
 
                  
                         <li><article class="hentry">    
@@ -457,35 +436,6 @@ talk about analyzing big data in the cloud.</p>
 University.  He advertises the cool idea to let the students teach ...</p>
                 <a class="readmore" href="./2012/06/big-data-cloud.html">read more</a>
                 <p>There are <a href="./2012/06/big-data-cloud.html#disqus_thread">comments</a>.</p>                </div><!-- /.entry-content -->
-            </article></li>
-                            
-
-                 
-                        <li><article class="hentry">    
-                <header>
-                    <h1><a href="./2012/06/diversity.html" rel="bookmark"
-                           title="Permalink to PyCon APAC 2012 - Diversity as a Dependency">PyCon APAC 2012 - Diversity as a Dependency</a></h1>
-                </header>
-                
-                <div class="entry-content">
-                <footer class="post-info">
-        <abbr class="published" title="2012-06-08T00:00:00">
-                Fri 08 June 2012
-        </abbr>
-
-                <address class="vcard author">
-                By <a class="url fn" href="./author/martin-brochhaus.html">Martin Brochhaus</a>
-        </address>
-        <p>In <a href="./category/blog.html">Blog</a>. </p>
-<p>tags: <a href="./tag/python.html">python</a><a href="./tag/pycon.html">pycon</a><a href="./tag/conferences.html">conferences</a></p>
-</footer><!-- /.post-info -->                <p>Here are my notes on <a href="https://plus.google.com/108526151904394584422/about">Anna Martelli Ravenscroft's</a>
-closing keynote on "Diversity as a Dependency".</p>
-<p><em>Edit</em>: Here is the video: https://www.youtube.com/watch?v=wOpdDxJzNkw</p>
-<p>She opens her keynote with a question:</p>
-<p>"What do you think of when you hear the word diversity?"</p>
-<p>Someone in the audience ...</p>
-                <a class="readmore" href="./2012/06/diversity.html">read more</a>
-                <p>There are <a href="./2012/06/diversity.html#disqus_thread">comments</a>.</p>                </div><!-- /.entry-content -->
             </article></li>
                             </ol><!-- /#posts-list -->
                             <p class="paginator">

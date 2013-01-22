@@ -58,8 +58,142 @@
 
                             <aside id="featured" class="body">
                 <article>
-                    <h1 class="entry-title"><a href="../2012/07/circus.html">Daemonize Solr with Circus 0.5 on Webfaction</a></h1> 
+                    <h1 class="entry-title"><a href="../2013/01/factory-boy.html">Test Models with Generic Foreign Keys and Factory Boy</a></h1> 
                     <footer class="post-info">
+        <abbr class="published" title="2013-01-22T00:00:00">
+                Tue 22 January 2013
+        </abbr>
+
+                <address class="vcard author">
+                By <a class="url fn" href="../author/martin-brochhaus.html">Martin Brochhaus</a>
+        </address>
+        <p>In <a href="../category/blog.html">Blog</a>. </p>
+<p>tags: <a href="../tag/python.html">python</a><a href="../tag/django.html">django</a><a href="../tag/testing.html">testing</a><a href="../tag/howto.html">howto</a></p>
+</footer><!-- /.post-info --><p>Let's say you are writing a reusable Django app and your app has a model with
+a generic foreign key. An example could be a messaging app where messages can
+attached to any other object (when you think about Facebook, a message can
+be sent to another User, or to his profile timeline, or to a status update
+and so on):</p>
+<div class="codehilite"><pre><span class="k">class</span> <span class="nc">Message</span><span class="p">(</span><span class="n">models</span><span class="o">.</span><span class="n">Model</span><span class="p">):</span>
+    <span class="n">user</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">ForeignKey</span><span class="p">(</span><span class="s">&#39;auth.User&#39;</span><span class="p">)</span>
+    <span class="n">text</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">TextField</span><span class="p">(</span><span class="n">max_length</span><span class="o">=</span><span class="mi">4000</span><span class="p">)</span>
+    <span class="n">creation_date</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">DateTimeField</span><span class="p">(</span><span class="n">auto_now_add</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+
+    <span class="c"># Generic FK to the object this message is attached to</span>
+    <span class="n">content_type</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">ForeignKey</span><span class="p">(</span><span class="n">ContentType</span><span class="p">)</span>
+    <span class="n">object_id</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">PositiveIntegerField</span><span class="p">()</span>
+    <span class="n">content_object</span> <span class="o">=</span> <span class="n">generic</span><span class="o">.</span><span class="n">GenericForeignKey</span><span class="p">(</span><span class="s">&#39;content_type&#39;</span><span class="p">,</span> <span class="s">&#39;object_id&#39;</span><span class="p">)</span>
+</pre></div>
+
+
+<p>I like to maintain 100% code coverage in all my projects, so I will even test
+seemingly mundane things like instantiation and saving of all my models. A test
+for this <code>Message</code> model could look like this:</p>
+<div class="codehilite"><pre><span class="kn">from</span> <span class="nn">django.test</span> <span class="kn">import</span> <span class="n">TestCase</span>
+<span class="kn">from</span> <span class="nn">messages.tests.factories</span> <span class="kn">import</span> <span class="n">MessageFactory</span>
+
+<span class="k">class</span> <span class="nc">MessageTestCase</span><span class="p">(</span><span class="n">TestCase</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">test_model</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Should be able to instantiate and save the model.&quot;&quot;&quot;</span>
+        <span class="n">obj</span> <span class="o">=</span> <span class="n">MessageFactory</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertTrue</span><span class="p">(</span><span class="n">obj</span><span class="o">.</span><span class="n">pk</span><span class="p">)</span>
+</pre></div>
+
+
+<p>Granted, this is a very simple test but as the model grows this test case would
+obviously grow as well. The interesting question is: How can we write the
+<code>MessageFactory</code>.</p>
+<p>The first thought would be to just use one of our other existing models (i.e.
+the Timeline model, if we were cloning Facebook). Unfortunately we can't do
+that because we are writing a reusable app here and the reusable app should be
+distributed on PyPi and therefore doesn't know anything about any of your other
+app's models.</p>
+<p>So we must create a <code>DummyModel</code> inside of our reusable app. You could put that
+model into your reusable app's <code>models.py</code> but then you would create a useless
+table when you run <code>syncdb</code> or <code>migrate</code>. So the better solution is to create
+a <code>test_app</code> inside of your reusable app and only add that app to
+<code>INSTALLED_APPS</code> in your <code>test_settings.py</code>.</p>
+<p>So let's create a few new files:</p>
+<div class="codehilite"><pre>yourapp/tests/factories.py
+yourapp/tests/models_tests.py
+yourapp/tests/test_app/__init__.py
+yourapp/tests/test_app/models.py
+</pre></div>
+
+
+<p>Your test app's <code>models.py</code> should look like this:</p>
+<div class="codehilite"><pre><span class="k">class</span> <span class="nc">DummyModel</span><span class="p">(</span><span class="n">models</span><span class="o">.</span><span class="n">Model</span><span class="p">):</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span><span class="n">max_length</span><span class="o">=</span><span class="mi">256</span><span class="p">,</span> <span class="n">blank</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+</pre></div>
+
+
+<p>Now we can create our reusable app's factory. There are three things to notice
+here:</p>
+<ol>
+<li>We will also create a factory for the <code>DummyModel</code> because then we can
+   use it as a sub-factory. And who knows, maybe that model will get more
+   complex as your app grows more complex as well.</li>
+<li>We are using the <a href="http://django-libs.readthedocs.org/en/latest/factories.html#factories">UserFactory of django-libs</a>.
+   django-libs is a collection of useful stuff that I need in almost all my
+   Django projects. Obviously I need to create <code>User</code> instances all the time
+   in my tests, therefore django-libs provides a <code>UserFactory</code>.</li>
+<li>The <code>MessageFactory</code> uses the <code>content_object</code> field to add the generic
+   foreign key to our <code>DummyModel</code>, which is quite convenient. Thankfully, we
+   don't have to wrestle around with the <code>content_type</code> and <code>object_id</code> fields
+   of the generic foreign key.</li>
+</ol>
+<p>Here is how your <code>factories.py</code> should look like:</p>
+<div class="codehilite"><pre><span class="kn">import</span> <span class="nn">factory</span>
+<span class="kn">from</span> <span class="nn">django_libs.tests.factories</span> <span class="kn">import</span> <span class="n">UserFactory</span>
+<span class="kn">from</span> <span class="nn">yourapp.tests.test_app.models</span> <span class="kn">import</span> <span class="n">DummyModel</span>
+<span class="kn">from</span> <span class="nn">yourapp.models</span> <span class="kn">import</span> <span class="n">Message</span>
+
+<span class="k">class</span> <span class="nc">DummyModelFactory</span><span class="p">(</span><span class="n">factory</span><span class="o">.</span><span class="n">Factory</span><span class="p">):</span>
+    <span class="n">FACTORY_FOR</span> <span class="o">=</span> <span class="n">DummyModel</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="s">&#39;Foobar&#39;</span>
+
+<span class="k">class</span> <span class="nc">MessageFactory</span><span class="p">(</span><span class="n">factory</span><span class="o">.</span><span class="n">Factory</span><span class="p">):</span>
+    <span class="n">FACTORY_FOR</span> <span class="o">=</span> <span class="n">Message</span>
+    <span class="n">user</span> <span class="o">=</span> <span class="n">factory</span><span class="o">.</span><span class="n">SubFactory</span><span class="p">(</span><span class="n">UserFactory</span><span class="p">)</span>
+    <span class="n">text</span> <span class="o">=</span> <span class="s">&#39;Hello world&#39;</span>
+    <span class="n">creation_date</span> <span class="o">=</span> <span class="n">factory</span><span class="o">.</span><span class="n">LazyAttribute</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">now</span><span class="p">())</span>
+    <span class="n">content_object</span> <span class="o">=</span> <span class="n">factory</span><span class="o">.</span><span class="n">SubFactory</span><span class="p">(</span><span class="n">DummyModelFactory</span><span class="p">)</span>
+</pre></div>
+
+
+<p>Now, whenever you want to create a <code>Message</code> in your tests, just call
+<code>MessageFactory()</code> and there you are. Your message will be tied to an
+instance of a <code>DummyModel</code> which will be created automagically as well.</p>
+<p>One last problem is left: When you run your tests, you will get an error
+message saying that there is no table for the <code>DummyModel</code> in your test
+database. In order to solve this you should create a <code>test_settings.py</code> which
+adds the <code>test_app</code> to your <code>INSTALLED_APPS</code>:</p>
+<div class="codehilite"><pre><span class="kn">from</span> <span class="nn">myproject.settings</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="n">INSTALLED_APPS</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s">&#39;yourapp.tests.test_app&#39;</span><span class="p">)</span>
+</pre></div>
+
+
+<p>Of course your <code>test_settings.py</code> needs a lot of other stuff. To speed up the
+tests you could to change the db backend to an in-memory sqlite database and
+for better test case recovery you could use a NoseTestRunner. Check out
+my <a href="https://github.com/bitmazk/django-libs/blob/master/django_libs/settings/test_settings.py">test settings in django-libs</a>
+for an example that I use in all my projects.</p><p>There are <a href="../2013/01/factory-boy.html#disqus_thread">comments</a>.</p>                </article>
+                            </aside><!-- /#featured -->
+                            <section id="content" class="body">
+                    <h1>Other articles</h1>
+                    <hr />
+                    <ol id="posts-list" class="hfeed">
+                                                
+
+                 
+                        <li><article class="hentry">    
+                <header>
+                    <h1><a href="../2012/07/circus.html" rel="bookmark"
+                           title="Permalink to Daemonize Solr with Circus 0.5 on Webfaction">Daemonize Solr with Circus 0.5 on Webfaction</a></h1>
+                </header>
+                
+                <div class="entry-content">
+                <footer class="post-info">
         <abbr class="published" title="2012-07-13T00:00:00">
                 Fri 13 July 2012
         </abbr>
@@ -69,106 +203,14 @@
         </address>
         <p>In <a href="../category/blog.html">Blog</a>. </p>
 <p>tags: <a href="../tag/python.html">python</a><a href="../tag/solr.html">solr</a><a href="../tag/circus.html">circus</a></p>
-</footer><!-- /.post-info --><p>Since Webfaction increased the available memory from 40 MB to 250 MB I started
+</footer><!-- /.post-info -->                <p>Since Webfaction increased the available memory from 40 MB to 250 MB I started
 using Solr for more and more of my projects. However, I never really knew how
 to ensure that Solr restarts itself if it crashes and how to easily stop and
-start it in case I have to re-build the <code>schema.xml</code> file.</p>
-<p>Then I found out about <a href="http://circus.readthedocs.org/en/0.5/index.html">Circus 0.5</a>
-and got curious.</p>
-<p>Here is what I did to install zeromq, solr and circus on a Webfaction server:</p>
-<h2>Install zeromq</h2>
-<p>Since we cannot install anything as root, I chose to install zeromq into
-the folder <code>/opt/zeromq-2.2.0</code>:</p>
-<div class="codehilite"><pre><span class="n">mkdir</span> <span class="o">-</span><span class="n">p</span> $<span class="n">HOME</span><span class="o">/</span><span class="n">src</span>
-<span class="n">mkdir</span> <span class="o">-</span><span class="n">p</span> $<span class="n">HOME</span><span class="o">/</span><span class="n">opt</span>
-<span class="n">mkdir</span> <span class="o">-</span><span class="n">p</span> $<span class="n">HOME</span><span class="o">/</span><span class="n">etc</span>
-<span class="n">cd</span> $<span class="n">HOME</span><span class="o">/</span><span class="n">src</span>
-<span class="n">wget</span> <span class="n">http</span><span class="p">:</span><span class="o">//</span><span class="n">download</span><span class="p">.</span><span class="n">zeromq</span><span class="p">.</span><span class="n">org</span><span class="o">/</span><span class="n">zeromq</span><span class="o">-</span>2<span class="p">.</span>2<span class="p">.</span>0<span class="p">.</span><span class="n">tar</span><span class="p">.</span><span class="n">gz</span>
-<span class="n">tar</span> <span class="o">-</span><span class="n">xvf</span> <span class="n">zeromq</span><span class="o">-</span>2<span class="p">.</span>2<span class="p">.</span>0<span class="p">.</span><span class="n">tar</span><span class="p">.</span><span class="n">gz</span>
-<span class="n">cd</span> <span class="n">zeromq</span><span class="o">-</span>2<span class="p">.</span>2<span class="p">.</span>0
-<span class="o">./</span><span class="n">configure</span> <span class="o">--</span><span class="n">prefix</span><span class="p">=</span>$<span class="n">HOME</span><span class="o">/</span><span class="n">opt</span><span class="o">/</span><span class="n">zeromq</span><span class="o">-</span>2<span class="p">.</span>2<span class="p">.</span>0
-<span class="n">make</span> <span class="o">&amp;&amp;</span> <span class="n">make</span> <span class="n">install</span>
-</pre></div>
-
-
-<h2>Install Circus</h2>
-<p>Now we can install Circus. I assume that you are using virtualenv and
-virtualenvwrapper:</p>
-<div class="codehilite"><pre><span class="n">workon</span> <span class="n">yourvenv</span>
-<span class="n">pip</span> <span class="n">install</span> <span class="n">circus</span>
-</pre></div>
-
-
-<p>This will fail because of the custom installation folder of zeromq. Thankfully
-the failed zeromq build will remain in your virtualenv's build folder so that
-you can install it again manually, this time giving it the path to your
-zeromq installation:</p>
-<div class="codehilite"><pre><span class="n">cd</span> <span class="o">/</span><span class="n">your</span><span class="o">/</span><span class="n">Venv</span><span class="o">/</span>
-<span class="n">cd</span> <span class="n">build</span>
-<span class="n">cd</span> <span class="n">pyzmq</span>
-<span class="n">python</span> <span class="n">setup</span><span class="p">.</span><span class="n">py</span> <span class="n">install</span> <span class="o">--</span><span class="n">zmq</span><span class="p">=</span><span class="o">/</span><span class="n">home</span><span class="o">/</span><span class="n">username</span><span class="o">/</span><span class="n">opt</span><span class="o">/</span><span class="n">zeromq</span><span class="o">-</span>2<span class="p">.</span>2<span class="p">.</span>0
-<span class="n">pip</span> <span class="n">install</span> <span class="n">circus</span>
-</pre></div>
-
-
-<h2>Install Solr</h2>
-<p>Now let's install Solr, following <a href="http://django-haystack.readthedocs.org/en/latest/installing_search_engines.html#solr">this post</a>.
-All you really need to do is download and unpack it:</p>
-<div class="codehilite"><pre><span class="n">cd</span> $<span class="n">HOME</span><span class="o">/</span><span class="n">opt</span>
-<span class="n">curl</span> <span class="o">-</span><span class="n">O</span> <span class="n">http</span><span class="p">:</span><span class="o">//</span><span class="n">apache</span><span class="p">.</span><span class="n">mirrors</span><span class="p">.</span><span class="n">tds</span><span class="p">.</span><span class="n">net</span><span class="o">/</span><span class="n">lucene</span><span class="o">/</span><span class="n">solr</span><span class="o">/</span>3<span class="p">.</span>5<span class="p">.</span>0<span class="o">/</span><span class="n">apache</span><span class="o">-</span><span class="n">solr</span><span class="o">-</span>3<span class="p">.</span>5<span class="p">.</span>0<span class="p">.</span><span class="n">tgz</span>
-<span class="n">tar</span> <span class="n">xvzf</span> <span class="n">apache</span><span class="o">-</span><span class="n">solr</span><span class="o">-</span>3<span class="p">.</span>5<span class="p">.</span>0<span class="p">.</span><span class="n">tgz</span>
-</pre></div>
-
-
-<h2>Configure Circus</h2>
-<p>Create a <code>circus.ini</code> file somewhere on your file system. The following file
-works great for me, just replace the path to your Solr installation
-(usually just change your username):</p>
-<div class="codehilite"><pre><span class="k">[circus]</span>
-<span class="na">check_delay</span> <span class="o">=</span> <span class="s">5</span>
-<span class="na">endpoint</span> <span class="o">=</span> <span class="s">tcp://127.0.0.1:5555</span>
-
-<span class="k">[watcher:solr]</span>
-<span class="na">cmd</span> <span class="o">=</span> <span class="s">java</span>
-<span class="na">args</span> <span class="o">=</span> <span class="s">-Djava.util.logging.config.file=logging.properties -jar start.jar</span>
-<span class="na">working_dir</span> <span class="o">=</span> <span class="s">/home/&lt;USERNAME&gt;/opt/apache-solr-3.5.0/example</span>
-<span class="na">warmup_delay</span> <span class="o">=</span> <span class="s">0</span>
-<span class="na">numprocesses</span> <span class="o">=</span> <span class="s">1</span>
-<span class="na">singleton</span> <span class="o">=</span> <span class="s">True</span>
-</pre></div>
-
-
-<p>Start circus:</p>
-<div class="codehilite"><pre><span class="n">circusd</span> <span class="n">circus</span><span class="p">.</span><span class="n">ini</span> <span class="o">&amp;</span>
-</pre></div>
-
-
-<p>That's it. On my Webfaction server circus eats 15MB RAM. You can now start and
-stop Solr using <code>circusctl</code>:</p>
-<div class="codehilite"><pre><span class="n">circusctl</span> <span class="n">status</span> <span class="n">solr</span>
-<span class="n">circusctl</span> <span class="n">stop</span> <span class="n">solr</span>
-<span class="n">circusctl</span> <span class="n">start</span> <span class="n">solr</span>
-</pre></div>
-
-
-<p>Or try to kill Solr. Circus will immediately restart it:</p>
-<div class="codehilite"><pre><span class="n">ps</span> <span class="n">aux</span> <span class="o">|</span> <span class="n">grep</span> <span class="n">java</span>
-<span class="n">kill</span> <span class="o">&lt;</span><span class="n">solr</span> <span class="n">PID</span><span class="o">&gt;</span>
-<span class="n">ps</span> <span class="n">aux</span> <span class="o">|</span> <span class="n">grep</span> <span class="n">java</span>
-</pre></div>
-
-
-<p>You need to be careful when starting and stopping Solr. Even though Circus will
-return <code>[OK]</code> the process will remain visible for a few seconds after you
-stopped it. Similarly it will not accept requests for a few seconds after it
-has been started. So if you use start and stop in a shell script or Fabric
-task better insert some <code>sleep</code> seconds before doing anything else with Solr.</p><p>There are <a href="../2012/07/circus.html#disqus_thread">comments</a>.</p>                </article>
-                            </aside><!-- /#featured -->
-                            <section id="content" class="body">
-                    <h1>Other articles</h1>
-                    <hr />
-                    <ol id="posts-list" class="hfeed">
-                                                
+start it in case I have ...</p>
+                <a class="readmore" href="../2012/07/circus.html">read more</a>
+                <p>There are <a href="../2012/07/circus.html#disqus_thread">comments</a>.</p>                </div><!-- /.entry-content -->
+            </article></li>
+                            
 
                  
                         <li><article class="hentry">    
@@ -394,36 +436,6 @@ time and money to attend so many conferences that a dedicated repository would
 make sense but I guess that I can give this ...</p>
                 <a class="readmore" href="../2012/06/pygame.html">read more</a>
                 <p>There are <a href="../2012/06/pygame.html#disqus_thread">comments</a>.</p>                </div><!-- /.entry-content -->
-            </article></li>
-                            
-
-                 
-                        <li><article class="hentry">    
-                <header>
-                    <h1><a href="../2012/02/snippets-201202.html" rel="bookmark"
-                           title="Permalink to Snippets of February 2012">Snippets of February 2012</a></h1>
-                </header>
-                
-                <div class="entry-content">
-                <footer class="post-info">
-        <abbr class="published" title="2012-02-29T00:00:00">
-                Wed 29 February 2012
-        </abbr>
-
-                <address class="vcard author">
-                By <a class="url fn" href="../author/martin-brochhaus.html">Martin Brochhaus</a>
-        </address>
-        <p>In <a href="../category/blog.html">Blog</a>. </p>
-<p>tags: <a href="../tag/git.html">git</a><a href="../tag/python.html">python</a><a href="../tag/vim.html">vim</a><a href="../tag/snippets.html">snippets</a></p>
-</footer><!-- /.post-info -->                <p>Naturally, as a developer I learn new awesome things almost every day.
-I thought it might be a good idea to keep track of all those small Ah-Ha!
-moments and release a snippets post every month.</p>
-<h1>Global .gitignore</h1>
-<p>When I wanted to contribute code to
-<a href="https://github.com/ametaireau/pelican">Pelican</a> I naively added
-<code>.ropeproject ...</code></p>
-                <a class="readmore" href="../2012/02/snippets-201202.html">read more</a>
-                <p>There are <a href="../2012/02/snippets-201202.html#disqus_thread">comments</a>.</p>                </div><!-- /.entry-content -->
             </article></li>
                             </ol><!-- /#posts-list -->
                             <p class="paginator">

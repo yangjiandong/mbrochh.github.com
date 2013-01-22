@@ -1,5 +1,113 @@
 <?xml version="1.0" encoding="utf-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom"><title>martinbrochhaus.com</title><link href="http://www.martinbrochhaus.com/" rel="alternate"></link><link href="http://www.martinbrochhaus.com/feeds/all.atom.xml" rel="self"></link><id>http://www.martinbrochhaus.com/</id><updated>2013-01-17T00:00:00+08:00</updated><entry><title>How to manage Twitter Bootstrap</title><link href="http://www.martinbrochhaus.com/2013/01/bootstrap.html" rel="alternate"></link><updated>2013-01-17T00:00:00+08:00</updated><author><name>Martin Brochhaus</name></author><id>tag:www.martinbrochhaus.com,2013-01-17:2013/01/bootstrap.html</id><summary type="html">&lt;p&gt;Without any doubt, &lt;a href="http://twitter.github.com/bootstrap/"&gt;Twitter's Bootstrap&lt;/a&gt;
+<feed xmlns="http://www.w3.org/2005/Atom"><title>martinbrochhaus.com</title><link href="http://www.martinbrochhaus.com/" rel="alternate"></link><link href="http://www.martinbrochhaus.com/feeds/all.atom.xml" rel="self"></link><id>http://www.martinbrochhaus.com/</id><updated>2013-01-22T00:00:00+08:00</updated><entry><title>Test Models with Generic Foreign Keys and Factory Boy</title><link href="http://www.martinbrochhaus.com/2013/01/factory-boy.html" rel="alternate"></link><updated>2013-01-22T00:00:00+08:00</updated><author><name>Martin Brochhaus</name></author><id>tag:www.martinbrochhaus.com,2013-01-22:2013/01/factory-boy.html</id><summary type="html">&lt;p&gt;Let's say you are writing a reusable Django app and your app has a model with
+a generic foreign key. An example could be a messaging app where messages can
+attached to any other object (when you think about Facebook, a message can
+be sent to another User, or to his profile timeline, or to a status update
+and so on):&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span class="k"&gt;class&lt;/span&gt; &lt;span class="nc"&gt;Message&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;models&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;Model&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+    &lt;span class="n"&gt;user&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;models&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;ForeignKey&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;#39;auth.User&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="n"&gt;text&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;models&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;TextField&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;max_length&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="mi"&gt;4000&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="n"&gt;creation_date&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;models&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;DateTimeField&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;auto_now_add&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="bp"&gt;True&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+
+    &lt;span class="c"&gt;# Generic FK to the object this message is attached to&lt;/span&gt;
+    &lt;span class="n"&gt;content_type&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;models&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;ForeignKey&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;ContentType&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="n"&gt;object_id&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;models&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;PositiveIntegerField&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+    &lt;span class="n"&gt;content_object&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;generic&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;GenericForeignKey&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;#39;content_type&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s"&gt;&amp;#39;object_id&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;I like to maintain 100% code coverage in all my projects, so I will even test
+seemingly mundane things like instantiation and saving of all my models. A test
+for this &lt;code&gt;Message&lt;/code&gt; model could look like this:&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span class="kn"&gt;from&lt;/span&gt; &lt;span class="nn"&gt;django.test&lt;/span&gt; &lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="n"&gt;TestCase&lt;/span&gt;
+&lt;span class="kn"&gt;from&lt;/span&gt; &lt;span class="nn"&gt;messages.tests.factories&lt;/span&gt; &lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="n"&gt;MessageFactory&lt;/span&gt;
+
+&lt;span class="k"&gt;class&lt;/span&gt; &lt;span class="nc"&gt;MessageTestCase&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;TestCase&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+    &lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;test_model&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+        &lt;span class="sd"&gt;&amp;quot;&amp;quot;&amp;quot;Should be able to instantiate and save the model.&amp;quot;&amp;quot;&amp;quot;&lt;/span&gt;
+        &lt;span class="n"&gt;obj&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;MessageFactory&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+        &lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;assertTrue&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;obj&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;pk&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;Granted, this is a very simple test but as the model grows this test case would
+obviously grow as well. The interesting question is: How can we write the
+&lt;code&gt;MessageFactory&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;The first thought would be to just use one of our other existing models (i.e.
+the Timeline model, if we were cloning Facebook). Unfortunately we can't do
+that because we are writing a reusable app here and the reusable app should be
+distributed on PyPi and therefore doesn't know anything about any of your other
+app's models.&lt;/p&gt;
+&lt;p&gt;So we must create a &lt;code&gt;DummyModel&lt;/code&gt; inside of our reusable app. You could put that
+model into your reusable app's &lt;code&gt;models.py&lt;/code&gt; but then you would create a useless
+table when you run &lt;code&gt;syncdb&lt;/code&gt; or &lt;code&gt;migrate&lt;/code&gt;. So the better solution is to create
+a &lt;code&gt;test_app&lt;/code&gt; inside of your reusable app and only add that app to
+&lt;code&gt;INSTALLED_APPS&lt;/code&gt; in your &lt;code&gt;test_settings.py&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;So let's create a few new files:&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;yourapp/tests/factories.py
+yourapp/tests/models_tests.py
+yourapp/tests/test_app/__init__.py
+yourapp/tests/test_app/models.py
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;Your test app's &lt;code&gt;models.py&lt;/code&gt; should look like this:&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span class="k"&gt;class&lt;/span&gt; &lt;span class="nc"&gt;DummyModel&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;models&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;Model&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+    &lt;span class="n"&gt;name&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;models&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;CharField&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;max_length&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="mi"&gt;256&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;blank&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="bp"&gt;True&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;Now we can create our reusable app's factory. There are three things to notice
+here:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;We will also create a factory for the &lt;code&gt;DummyModel&lt;/code&gt; because then we can
+   use it as a sub-factory. And who knows, maybe that model will get more
+   complex as your app grows more complex as well.&lt;/li&gt;
+&lt;li&gt;We are using the &lt;a href="http://django-libs.readthedocs.org/en/latest/factories.html#factories"&gt;UserFactory of django-libs&lt;/a&gt;.
+   django-libs is a collection of useful stuff that I need in almost all my
+   Django projects. Obviously I need to create &lt;code&gt;User&lt;/code&gt; instances all the time
+   in my tests, therefore django-libs provides a &lt;code&gt;UserFactory&lt;/code&gt;.&lt;/li&gt;
+&lt;li&gt;The &lt;code&gt;MessageFactory&lt;/code&gt; uses the &lt;code&gt;content_object&lt;/code&gt; field to add the generic
+   foreign key to our &lt;code&gt;DummyModel&lt;/code&gt;, which is quite convenient. Thankfully, we
+   don't have to wrestle around with the &lt;code&gt;content_type&lt;/code&gt; and &lt;code&gt;object_id&lt;/code&gt; fields
+   of the generic foreign key.&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;Here is how your &lt;code&gt;factories.py&lt;/code&gt; should look like:&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="nn"&gt;factory&lt;/span&gt;
+&lt;span class="kn"&gt;from&lt;/span&gt; &lt;span class="nn"&gt;django_libs.tests.factories&lt;/span&gt; &lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="n"&gt;UserFactory&lt;/span&gt;
+&lt;span class="kn"&gt;from&lt;/span&gt; &lt;span class="nn"&gt;yourapp.tests.test_app.models&lt;/span&gt; &lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="n"&gt;DummyModel&lt;/span&gt;
+&lt;span class="kn"&gt;from&lt;/span&gt; &lt;span class="nn"&gt;yourapp.models&lt;/span&gt; &lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="n"&gt;Message&lt;/span&gt;
+
+&lt;span class="k"&gt;class&lt;/span&gt; &lt;span class="nc"&gt;DummyModelFactory&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;factory&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;Factory&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+    &lt;span class="n"&gt;FACTORY_FOR&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;DummyModel&lt;/span&gt;
+    &lt;span class="n"&gt;name&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="s"&gt;&amp;#39;Foobar&amp;#39;&lt;/span&gt;
+
+&lt;span class="k"&gt;class&lt;/span&gt; &lt;span class="nc"&gt;MessageFactory&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;factory&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;Factory&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+    &lt;span class="n"&gt;FACTORY_FOR&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;Message&lt;/span&gt;
+    &lt;span class="n"&gt;user&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;factory&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;SubFactory&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;UserFactory&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="n"&gt;text&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="s"&gt;&amp;#39;Hello world&amp;#39;&lt;/span&gt;
+    &lt;span class="n"&gt;creation_date&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;factory&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;LazyAttribute&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="k"&gt;lambda&lt;/span&gt; &lt;span class="n"&gt;x&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="n"&gt;now&lt;/span&gt;&lt;span class="p"&gt;())&lt;/span&gt;
+    &lt;span class="n"&gt;content_object&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;factory&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;SubFactory&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;DummyModelFactory&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;Now, whenever you want to create a &lt;code&gt;Message&lt;/code&gt; in your tests, just call
+&lt;code&gt;MessageFactory()&lt;/code&gt; and there you are. Your message will be tied to an
+instance of a &lt;code&gt;DummyModel&lt;/code&gt; which will be created automagically as well.&lt;/p&gt;
+&lt;p&gt;One last problem is left: When you run your tests, you will get an error
+message saying that there is no table for the &lt;code&gt;DummyModel&lt;/code&gt; in your test
+database. In order to solve this you should create a &lt;code&gt;test_settings.py&lt;/code&gt; which
+adds the &lt;code&gt;test_app&lt;/code&gt; to your &lt;code&gt;INSTALLED_APPS&lt;/code&gt;:&lt;/p&gt;
+&lt;div class="codehilite"&gt;&lt;pre&gt;&lt;span class="kn"&gt;from&lt;/span&gt; &lt;span class="nn"&gt;myproject.settings&lt;/span&gt; &lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt;
+&lt;span class="n"&gt;INSTALLED_APPS&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;append&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;#39;yourapp.tests.test_app&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;Of course your &lt;code&gt;test_settings.py&lt;/code&gt; needs a lot of other stuff. To speed up the
+tests you could to change the db backend to an in-memory sqlite database and
+for better test case recovery you could use a NoseTestRunner. Check out
+my &lt;a href="https://github.com/bitmazk/django-libs/blob/master/django_libs/settings/test_settings.py"&gt;test settings in django-libs&lt;/a&gt;
+for an example that I use in all my projects.&lt;/p&gt;</summary><category term="python"></category><category term="django"></category><category term="testing"></category><category term="howto"></category></entry><entry><title>How to manage Twitter Bootstrap</title><link href="http://www.martinbrochhaus.com/2013/01/bootstrap.html" rel="alternate"></link><updated>2013-01-17T00:00:00+08:00</updated><author><name>Martin Brochhaus</name></author><id>tag:www.martinbrochhaus.com,2013-01-17:2013/01/bootstrap.html</id><summary type="html">&lt;p&gt;Without any doubt, &lt;a href="http://twitter.github.com/bootstrap/"&gt;Twitter's Bootstrap&lt;/a&gt;
 is awesome. So far I am using it in more than 10 projects and I don't regret
 anything.&lt;/p&gt;
 &lt;p&gt;Unfortunately, Bootstrap has one major flaw: You can't really add it to your
